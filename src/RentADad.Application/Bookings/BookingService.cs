@@ -31,6 +31,8 @@ public sealed class BookingService
     {
         try
         {
+            ValidateTimeWindow(request.StartUtc, request.EndUtc);
+
             var booking = new Booking(
                 Guid.NewGuid(),
                 request.JobId,
@@ -42,9 +44,13 @@ public sealed class BookingService
             await _unitOfWork.SaveChangesAsync(cancellationToken);
             return ToResponse(booking);
         }
+        catch (BookingDomainException)
+        {
+            throw;
+        }
         catch (DomainRuleViolationException ex)
         {
-            throw new BookingDomainException(ex.Message);
+            throw new BookingDomainException(ex.Message, MapBookingErrorCode(ex.Message));
         }
     }
 
@@ -84,7 +90,7 @@ public sealed class BookingService
         }
         catch (DomainRuleViolationException ex)
         {
-            throw new BookingDomainException(ex.Message);
+            throw new BookingDomainException(ex.Message, MapBookingErrorCode(ex.Message));
         }
     }
 
@@ -97,5 +103,37 @@ public sealed class BookingService
             booking.StartUtc,
             booking.EndUtc,
             booking.Status.ToString());
+    }
+
+    private static string MapBookingErrorCode(string message)
+    {
+        if (message.Contains("pending bookings can be confirmed", StringComparison.OrdinalIgnoreCase))
+            return "booking_invalid_status_confirm";
+        if (message.Contains("pending bookings can be declined", StringComparison.OrdinalIgnoreCase))
+            return "booking_invalid_status_decline";
+        if (message.Contains("pending bookings can expire", StringComparison.OrdinalIgnoreCase))
+            return "booking_invalid_status_expire";
+        if (message.Contains("confirmed bookings can be cancelled", StringComparison.OrdinalIgnoreCase))
+            return "booking_invalid_status_cancel";
+        if (message.Contains("Booking end must be after start", StringComparison.OrdinalIgnoreCase))
+            return "booking_invalid_time_range";
+        if (message.Contains("Booking id is required", StringComparison.OrdinalIgnoreCase))
+            return "booking_id_required";
+        if (message.Contains("Job id is required", StringComparison.OrdinalIgnoreCase))
+            return "booking_job_required";
+        if (message.Contains("Provider id is required", StringComparison.OrdinalIgnoreCase))
+            return "booking_provider_required";
+
+        return "booking_rule_violation";
+    }
+
+    private static void ValidateTimeWindow(DateTime startUtc, DateTime endUtc)
+    {
+        if (startUtc.Kind != DateTimeKind.Utc || endUtc.Kind != DateTimeKind.Utc)
+            throw new BookingDomainException("StartUtc and EndUtc must be UTC.", "booking_time_not_utc");
+        if (startUtc < DateTime.UtcNow)
+            throw new BookingDomainException("StartUtc must be in the future.", "booking_time_in_past");
+        if (endUtc <= startUtc)
+            throw new BookingDomainException("EndUtc must be after StartUtc.", "booking_invalid_time_range");
     }
 }

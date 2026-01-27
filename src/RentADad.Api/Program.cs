@@ -79,9 +79,9 @@ app.UseExceptionHandler(exceptionApp =>
 
         var problem = exception switch
         {
-            JobDomainException ex => CreateProblem(StatusCodes.Status409Conflict, "job_rule_violation", ex.Message),
-            BookingDomainException ex => CreateProblem(StatusCodes.Status409Conflict, "booking_rule_violation", ex.Message),
-            ProviderDomainException ex => CreateProblem(StatusCodes.Status409Conflict, "provider_rule_violation", ex.Message),
+            JobDomainException ex => CreateProblem(StatusCodes.Status409Conflict, ex.ErrorCode, ex.Message),
+            BookingDomainException ex => CreateProblem(StatusCodes.Status409Conflict, ex.ErrorCode, ex.Message),
+            ProviderDomainException ex => CreateProblem(StatusCodes.Status409Conflict, ex.ErrorCode, ex.Message),
             _ => CreateProblem(StatusCodes.Status500InternalServerError, "server_error", "An unexpected error occurred.")
         };
 

@@ -14,8 +14,8 @@
 
 ## P1 Application
 
-- [ ] Add domain rule error codes for Job/Booking/Provider
-- [ ] Add application-level validation for date/time windows
+- [x] Add domain rule error codes for Job/Booking/Provider
+- [x] Add application-level validation for date/time windows
 
 ## P2 Observability
 

@@ -40,7 +40,7 @@ public sealed class ProviderService
         }
         catch (DomainRuleViolationException ex)
         {
-            throw new ProviderDomainException(ex.Message);
+            throw new ProviderDomainException(ex.Message, MapProviderErrorCode(ex.Message));
         }
     }
 
@@ -61,13 +61,18 @@ public sealed class ProviderService
 
         try
         {
+            ValidateTimeWindow(request.StartUtc, request.EndUtc);
             provider.AddAvailability(request.StartUtc, request.EndUtc);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
             return ToResponse(provider);
         }
+        catch (ProviderDomainException)
+        {
+            throw;
+        }
         catch (DomainRuleViolationException ex)
         {
-            throw new ProviderDomainException(ex.Message);
+            throw new ProviderDomainException(ex.Message, MapProviderErrorCode(ex.Message));
         }
     }
 
@@ -88,5 +93,29 @@ public sealed class ProviderService
             .ToList();
 
         return new ProviderResponse(provider.Id, provider.DisplayName, availabilities);
+    }
+
+    private static string MapProviderErrorCode(string message)
+    {
+        if (message.Contains("Availability windows must not overlap", StringComparison.OrdinalIgnoreCase))
+            return "provider_availability_overlap";
+        if (message.Contains("Availability end must be after start", StringComparison.OrdinalIgnoreCase))
+            return "provider_availability_invalid_range";
+        if (message.Contains("Provider id is required", StringComparison.OrdinalIgnoreCase))
+            return "provider_id_required";
+        if (message.Contains("Availability id is required", StringComparison.OrdinalIgnoreCase))
+            return "provider_availability_id_required";
+
+        return "provider_rule_violation";
+    }
+
+    private static void ValidateTimeWindow(DateTime startUtc, DateTime endUtc)
+    {
+        if (startUtc.Kind != DateTimeKind.Utc || endUtc.Kind != DateTimeKind.Utc)
+            throw new ProviderDomainException("StartUtc and EndUtc must be UTC.", "provider_availability_time_not_utc");
+        if (startUtc < DateTime.UtcNow)
+            throw new ProviderDomainException("StartUtc must be in the future.", "provider_availability_time_in_past");
+        if (endUtc <= startUtc)
+            throw new ProviderDomainException("EndUtc must be after StartUtc.", "provider_availability_invalid_range");
     }
 }

@@ -51,7 +51,7 @@ public sealed class JobService
         }
         catch (DomainRuleViolationException ex)
         {
-            throw new JobDomainException(ex.Message);
+            throw new JobDomainException(ex.Message, MapJobErrorCode(ex.Message));
         }
     }
 
@@ -74,7 +74,7 @@ public sealed class JobService
         }
         catch (DomainRuleViolationException ex)
         {
-            throw new JobDomainException(ex.Message);
+            throw new JobDomainException(ex.Message, MapJobErrorCode(ex.Message));
         }
     }
 
@@ -104,7 +104,7 @@ public sealed class JobService
         }
         catch (DomainRuleViolationException ex)
         {
-            throw new JobDomainException(ex.Message);
+            throw new JobDomainException(ex.Message, MapJobErrorCode(ex.Message));
         }
     }
 
@@ -159,7 +159,7 @@ public sealed class JobService
         }
         catch (DomainRuleViolationException ex)
         {
-            throw new JobDomainException(ex.Message);
+            throw new JobDomainException(ex.Message, MapJobErrorCode(ex.Message));
         }
     }
 
@@ -172,5 +172,33 @@ public sealed class JobService
             job.ServiceIds.ToArray(),
             job.Status.ToString(),
             job.ActiveBookingId);
+    }
+
+    private static string MapJobErrorCode(string message)
+    {
+        if (message.Contains("draft jobs can be posted", StringComparison.OrdinalIgnoreCase))
+            return "job_invalid_status_post";
+        if (message.Contains("posted jobs can be accepted", StringComparison.OrdinalIgnoreCase))
+            return "job_invalid_status_accept";
+        if (message.Contains("accepted jobs can start", StringComparison.OrdinalIgnoreCase))
+            return "job_invalid_status_start";
+        if (message.Contains("in-progress jobs can be completed", StringComparison.OrdinalIgnoreCase))
+            return "job_invalid_status_complete";
+        if (message.Contains("completed jobs can be closed", StringComparison.OrdinalIgnoreCase))
+            return "job_invalid_status_close";
+        if (message.Contains("completed jobs can be disputed", StringComparison.OrdinalIgnoreCase))
+            return "job_invalid_status_dispute";
+        if (message.Contains("draft, posted, or accepted jobs can be cancelled", StringComparison.OrdinalIgnoreCase))
+            return "job_invalid_status_cancel";
+        if (message.Contains("Only draft jobs can be modified", StringComparison.OrdinalIgnoreCase))
+            return "job_invalid_status_update";
+        if (message.Contains("At least one service is required", StringComparison.OrdinalIgnoreCase))
+            return "job_services_required";
+        if (message.Contains("Location is required", StringComparison.OrdinalIgnoreCase))
+            return "job_location_required";
+        if (message.Contains("Booking id is required", StringComparison.OrdinalIgnoreCase))
+            return "job_booking_required";
+
+        return "job_rule_violation";
     }
 }
