@@ -204,11 +204,27 @@ app.MapHealthChecks("/health/ready", new HealthCheckOptions
 });
 
 var autoMigrate = app.Configuration.GetValue("Database:AutoMigrate", true);
+var migrationsOnly = args.Contains("--apply-migrations-only");
+var seedDemo = args.Contains("--seed-demo");
 if (autoMigrate && !app.Environment.IsEnvironment("Testing"))
 {
     using var scope = app.Services.CreateScope();
     var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     await dbContext.Database.MigrateAsync();
+}
+
+if (migrationsOnly)
+{
+    return;
+}
+
+if (seedDemo && !app.Environment.IsEnvironment("Testing"))
+{
+    using var scope = app.Services.CreateScope();
+    var seeder = scope.ServiceProvider.GetRequiredService<DevSeeder>();
+    var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    await seeder.SeedAsync(dbContext);
+    return;
 }
 
 if (app.Environment.IsDevelopment())

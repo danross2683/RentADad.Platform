@@ -12,10 +12,11 @@ This project is API-only. Use the steps below to run locally.
 Set these before running the API:
 
 - `ASPNETCORE_ENVIRONMENT=Development`
-- `ConnectionStrings__Default=Host=localhost;Port=5432;Database=rentadad;Username=postgres;Password=postgres`
-- `Jwt__Issuer=rentadad.local`
-- `Jwt__Audience=rentadad.local`
-- `Jwt__Key=dev-only-change-me`
+- `RentADad_ConnectionStrings__Default=Host=localhost;Port=5432;Database=rentadad;Username=postgres;Password=postgres`
+- Optional: `RentADad_Auth__Enabled=true` (requires issuer/audience/signing key)
+  - `RentADad_Auth__Issuer=rentadad.local`
+  - `RentADad_Auth__Audience=rentadad.local`
+  - `RentADad_Auth__SigningKey=dev-only-change-me`
 
 ## Ports
 
@@ -29,8 +30,19 @@ For local development, prefer user-secrets or environment variables. Never commi
 ## Run locally
 
 ```shell
-docker compose up -d
-dotnet restore
-dotnet ef database update
+./scripts/dev-bootstrap.ps1
 dotnet run --project src/RentADad.Api
+```
+
+## Task runner
+
+We use `just` for common tasks:
+
+```shell
+just restore
+just build
+just test
+just migrate
+just seed-demo
+just run
 ```

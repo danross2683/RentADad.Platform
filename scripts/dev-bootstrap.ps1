@@ -1,5 +1,6 @@
 param(
     [switch]$RunMigrations = $true,
+    [switch]$SeedDemo = $false,
     [switch]$RunTests = $false
 )
 
@@ -24,7 +25,13 @@ docker compose up -d
 if ($RunMigrations) {
     Write-Host "Applying migrations..."
     $env:ASPNETCORE_ENVIRONMENT = "Development"
-    dotnet run --project .\src\RentADad.Api\RentADad.Api.csproj
+    dotnet run --project .\src\RentADad.Api\RentADad.Api.csproj -- --apply-migrations-only
+}
+
+if ($SeedDemo) {
+    Write-Host "Seeding demo data..."
+    $env:ASPNETCORE_ENVIRONMENT = "Development"
+    dotnet run --project .\src\RentADad.Api\RentADad.Api.csproj -- --seed-demo
 }
 
 if ($RunTests) {

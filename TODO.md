@@ -32,9 +32,9 @@
 
 ### P2 Developer Experience
 
-- [ ] Add local dev bootstrap script
-- [ ] Add make/just tasks (build/test/format)
-- [ ] Add seed data CLI for demo scenarios
+- [x] Add local dev bootstrap script
+- [x] Add make/just tasks (build/test/format)
+- [x] Add seed data CLI for demo scenarios
 
 ---
 
