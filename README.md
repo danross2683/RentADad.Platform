@@ -33,7 +33,7 @@ This mirrors how real systems grow in industry.
 ## What’s Different From the Original Rent-a-Dad
 
 | Original Rent-a-Dad | RentADad.Platform |
-|---------------------|------------------|
+| ------------------- | ----------------- |
 | ASP.NET Core MVC | ASP.NET Core Web API |
 | Razor views | API-only (no frontend) |
 | Feature-driven design | Domain-driven lifecycle modelling |
@@ -106,7 +106,7 @@ Dependencies flow inward only.
 
 ## Running Locally
 
-###Prerequisites
+### Prerequisites
 
 - .NET SDK (LTS)
 
@@ -122,6 +122,9 @@ dotnet run --project src/RentADad.Api
 ```
 
 Swagger / OpenAPI will be available locally for exploration.
+
+See `docs/DEV_SETUP.md` for environment variables, ports, and secrets.
+See `docs/API_CONVENTIONS.md` for initial API surface area and naming conventions.
 
 ## Non-Goals
 
