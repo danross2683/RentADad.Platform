@@ -161,6 +161,7 @@ Swagger / OpenAPI will be available locally for exploration.
 
 See `docs/DEV_SETUP.md` for environment variables, ports, and secrets.
 See `docs/API_CONVENTIONS.md` for initial API surface area and naming conventions.
+See `docs/DOMAIN_RULES.md` for lifecycle, invariants, and event definitions.
 
 ## Non-Goals
 

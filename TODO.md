@@ -8,10 +8,10 @@
 
 ## Domain
 
-- [ ] Formalize job lifecycle states and transitions
-- [ ] Define booking invariants and validation rules
-- [ ] Model provider availability constraints
-- [ ] Add domain events for state changes
+- [x] Formalize job lifecycle states and transitions
+- [x] Define booking invariants and validation rules
+- [x] Model provider availability constraints
+- [x] Add domain events for state changes
 
 ## Application
 
