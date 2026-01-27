@@ -1,18 +1,14 @@
 using System.Net;
 using System.Net.Http.Json;
 using FluentAssertions;
-using Microsoft.AspNetCore.Mvc.Testing;
-using RentADad.Application.Bookings.Requests;
-using RentADad.Application.Jobs.Requests;
-using RentADad.Application.Providers.Requests;
 
 namespace RentADad.Tests.Api;
 
-public sealed class JobsApiTests : IClassFixture<WebApplicationFactory<Program>>
+public sealed class JobsApiTests : IClassFixture<TestApplicationFactory>
 {
-    private readonly WebApplicationFactory<Program> _factory;
+    private readonly TestApplicationFactory _factory;
 
-    public JobsApiTests(WebApplicationFactory<Program> factory)
+    public JobsApiTests(TestApplicationFactory factory)
     {
         _factory = factory;
     }
@@ -22,7 +18,7 @@ public sealed class JobsApiTests : IClassFixture<WebApplicationFactory<Program>>
     {
         var client = _factory.CreateClient();
 
-        var response = await client.PostAsJsonAsync("/api/v1/jobs", new CreateJobRequest(Guid.NewGuid(), "Somewhere", new List<Guid>()));
+        var response = await client.PostAsJsonAsync("/api/v1/jobs", TestDataFactory.Job(serviceIds: new List<Guid>()));
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }

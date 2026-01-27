@@ -2,9 +2,9 @@
 
 ## P0 Core Stability
 
-- [ ] Add test database setup/teardown for integration tests
-- [ ] Add deterministic test data helpers for Jobs/Bookings/Providers
-- [ ] Add CI-friendly configuration for connection strings
+- [x] Add test database setup/teardown for integration tests
+- [x] Add deterministic test data helpers for Jobs/Bookings/Providers
+- [x] Add CI-friendly configuration for connection strings
 
 ## P1 API Behavior
 

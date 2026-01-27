@@ -1,21 +1,17 @@
 using System.Net;
 using System.Net.Http.Json;
 using FluentAssertions;
-using Microsoft.AspNetCore.Mvc.Testing;
-using RentADad.Application.Bookings.Requests;
 using RentADad.Application.Bookings.Responses;
-using RentADad.Application.Jobs.Requests;
 using RentADad.Application.Jobs.Responses;
-using RentADad.Application.Providers.Requests;
 using RentADad.Application.Providers.Responses;
 
 namespace RentADad.Tests.Api;
 
-public sealed class BookingsApiTests : IClassFixture<WebApplicationFactory<Program>>
+public sealed class BookingsApiTests : IClassFixture<TestApplicationFactory>
 {
-    private readonly WebApplicationFactory<Program> _factory;
+    private readonly TestApplicationFactory _factory;
 
-    public BookingsApiTests(WebApplicationFactory<Program> factory)
+    public BookingsApiTests(TestApplicationFactory factory)
     {
         _factory = factory;
     }
@@ -27,7 +23,7 @@ public sealed class BookingsApiTests : IClassFixture<WebApplicationFactory<Progr
 
         var response = await client.PostAsJsonAsync(
             "/api/v1/bookings",
-            new CreateBookingRequest(Guid.NewGuid(), Guid.NewGuid(), DateTime.UtcNow, DateTime.UtcNow.AddMinutes(-10)));
+            TestDataFactory.Booking(Guid.NewGuid(), Guid.NewGuid(), DateTime.UtcNow, DateTime.UtcNow.AddMinutes(-10)));
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
@@ -39,14 +35,14 @@ public sealed class BookingsApiTests : IClassFixture<WebApplicationFactory<Progr
 
         var providerResponse = await client.PostAsJsonAsync(
             "/api/v1/providers",
-            new RegisterProviderRequest(null, "Test Provider"));
+            TestDataFactory.Provider());
         providerResponse.StatusCode.Should().Be(HttpStatusCode.Created);
         var provider = await providerResponse.Content.ReadFromJsonAsync<ProviderResponse>();
         provider.Should().NotBeNull();
 
         var jobResponse = await client.PostAsJsonAsync(
             "/api/v1/jobs",
-            new CreateJobRequest(Guid.NewGuid(), "Test Location", new List<Guid> { Guid.NewGuid() }));
+            TestDataFactory.Job());
         jobResponse.StatusCode.Should().Be(HttpStatusCode.Created);
         var job = await jobResponse.Content.ReadFromJsonAsync<JobResponse>();
         job.Should().NotBeNull();
@@ -55,7 +51,7 @@ public sealed class BookingsApiTests : IClassFixture<WebApplicationFactory<Progr
         var end = start.AddHours(2);
         var bookingResponse = await client.PostAsJsonAsync(
             "/api/v1/bookings",
-            new CreateBookingRequest(job!.Id, provider!.Id, start, end));
+            TestDataFactory.Booking(job!.Id, provider!.Id, start, end));
         bookingResponse.StatusCode.Should().Be(HttpStatusCode.Created);
         var booking = await bookingResponse.Content.ReadFromJsonAsync<BookingResponse>();
         booking.Should().NotBeNull();

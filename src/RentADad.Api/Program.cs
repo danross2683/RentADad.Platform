@@ -20,11 +20,25 @@ using RentADad.Infrastructure.Persistence.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Configuration.AddEnvironmentVariables(prefix: "RentADad_");
+
 builder.Services.AddOpenApi();
 builder.Services.AddDbContext<AppDbContext>(options =>
+{
+    var connectionString = builder.Configuration.GetConnectionString("Default");
+    var testConnection = builder.Configuration.GetConnectionString("Test");
+    var useSqlite = builder.Environment.IsEnvironment("Testing") && !string.IsNullOrWhiteSpace(testConnection);
+
+    if (useSqlite)
+    {
+        options.UseSqlite(testConnection);
+        return;
+    }
+
     options.UseNpgsql(
-        builder.Configuration.GetConnectionString("Default"),
-        npgsql => npgsql.MigrationsAssembly(typeof(AppDbContext).Assembly.GetName().Name)));
+        connectionString,
+        npgsql => npgsql.MigrationsAssembly(typeof(AppDbContext).Assembly.GetName().Name));
+});
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<IJobRepository, JobRepository>();
 builder.Services.AddScoped<IBookingRepository, BookingRepository>();

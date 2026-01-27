@@ -1,17 +1,15 @@
 using System.Net;
 using System.Net.Http.Json;
 using FluentAssertions;
-using Microsoft.AspNetCore.Mvc.Testing;
-using RentADad.Application.Providers.Requests;
 using RentADad.Application.Providers.Responses;
 
 namespace RentADad.Tests.Api;
 
-public sealed class ProvidersApiTests : IClassFixture<WebApplicationFactory<Program>>
+public sealed class ProvidersApiTests : IClassFixture<TestApplicationFactory>
 {
-    private readonly WebApplicationFactory<Program> _factory;
+    private readonly TestApplicationFactory _factory;
 
-    public ProvidersApiTests(WebApplicationFactory<Program> factory)
+    public ProvidersApiTests(TestApplicationFactory factory)
     {
         _factory = factory;
     }
@@ -23,7 +21,7 @@ public sealed class ProvidersApiTests : IClassFixture<WebApplicationFactory<Prog
 
         var response = await client.PostAsJsonAsync(
             "/api/v1/providers",
-            new RegisterProviderRequest(null, "Test Provider"));
+            TestDataFactory.Provider());
 
         response.StatusCode.Should().Be(HttpStatusCode.Created);
         var created = await response.Content.ReadFromJsonAsync<ProviderResponse>();
