@@ -8,9 +8,9 @@
 
 ## P1 API Behavior
 
-- [ ] Add Jobs lifecycle integration tests (post/accept/start/complete/close)
-- [ ] Add Booking edge-case tests (double confirm, cancel after confirm, expire)
-- [ ] Add Provider availability tests (overlap rejection, remove availability)
+- [x] Add Jobs lifecycle integration tests (post/accept/start/complete/close)
+- [x] Add Booking edge-case tests (double confirm, cancel after confirm, expire)
+- [x] Add Provider availability tests (overlap rejection, remove availability)
 
 ## P1 Application
 
