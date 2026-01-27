@@ -1,10 +1,12 @@
 {
   "version": 2,
-  "dgSpecHash": "Vv+YNIOsdNU=",
+  "dgSpecHash": "hgr/0Af14yo=",
   "success": true,
   "projectFilePath": "C:\\Users\\danross\\source\\RentADad.Platform\\src\\RentADad.Application\\RentADad.Application.csproj",
   "expectedPackageFiles": [
-    "C:\\Users\\danross\\.nuget\\packages\\fluentvalidation\\12.1.1\\fluentvalidation.12.1.1.nupkg.sha512"
+    "C:\\Users\\danross\\.nuget\\packages\\fluentvalidation\\12.1.1\\fluentvalidation.12.1.1.nupkg.sha512",
+    "C:\\Users\\danross\\.nuget\\packages\\microsoft.extensions.dependencyinjection.abstractions\\10.0.0\\microsoft.extensions.dependencyinjection.abstractions.10.0.0.nupkg.sha512",
+    "C:\\Users\\danross\\.nuget\\packages\\microsoft.extensions.logging.abstractions\\10.0.0\\microsoft.extensions.logging.abstractions.10.0.0.nupkg.sha512"
   ],
   "logs": []
 }

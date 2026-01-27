@@ -20,6 +20,7 @@ public sealed class ProviderConfiguration : IEntityTypeConfiguration<Provider>
                 availabilities.ToTable("provider_availability");
                 availabilities.WithOwner().HasForeignKey("ProviderId");
                 availabilities.HasKey(a => a.Id);
+                availabilities.Property(a => a.Id).ValueGeneratedNever();
                 availabilities.Property(a => a.StartUtc).IsRequired();
                 availabilities.Property(a => a.EndUtc).IsRequired();
             });

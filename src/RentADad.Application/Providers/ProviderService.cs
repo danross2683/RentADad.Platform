@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using RentADad.Application.Abstractions.Persistence;
 using RentADad.Application.Abstractions.Repositories;
 using RentADad.Application.Providers.Requests;
@@ -15,11 +16,13 @@ public sealed class ProviderService
 {
     private readonly IProviderRepository _providers;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ILogger<ProviderService> _logger;
 
-    public ProviderService(IProviderRepository providers, IUnitOfWork unitOfWork)
+    public ProviderService(IProviderRepository providers, IUnitOfWork unitOfWork, ILogger<ProviderService> logger)
     {
         _providers = providers;
         _unitOfWork = unitOfWork;
+        _logger = logger;
     }
 
     public async Task<ProviderResponse?> GetAsync(Guid providerId, CancellationToken cancellationToken = default)
@@ -35,6 +38,7 @@ public sealed class ProviderService
             var providerId = request.ProviderId ?? Guid.NewGuid();
             var provider = new Provider(providerId, request.DisplayName ?? string.Empty);
             _providers.Add(provider);
+            _logger.LogInformation("Provider registered {ProviderId}", provider.Id);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
             return ToResponse(provider);
         }
@@ -50,6 +54,7 @@ public sealed class ProviderService
         if (provider is null) return null;
 
         provider.UpdateDisplayName(request.DisplayName ?? string.Empty);
+        _logger.LogInformation("Provider updated {ProviderId}", provider.Id);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
         return ToResponse(provider);
     }
@@ -63,6 +68,7 @@ public sealed class ProviderService
         {
             ValidateTimeWindow(request.StartUtc, request.EndUtc);
             provider.AddAvailability(request.StartUtc, request.EndUtc);
+            _logger.LogInformation("Provider availability added {ProviderId}", provider.Id);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
             return ToResponse(provider);
         }
@@ -82,6 +88,7 @@ public sealed class ProviderService
         if (provider is null) return null;
 
         provider.RemoveAvailability(availabilityId);
+        _logger.LogInformation("Provider availability removed {ProviderId} {AvailabilityId}", provider.Id, availabilityId);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
         return ToResponse(provider);
     }

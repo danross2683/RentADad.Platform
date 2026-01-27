@@ -20,6 +20,9 @@ public sealed class DevSeeder
         var provider = new Provider(Guid.NewGuid(), "Alex Fixer");
         provider.AddAvailability(DateTime.UtcNow.Date.AddDays(1).AddHours(9), DateTime.UtcNow.Date.AddDays(1).AddHours(17));
 
+        var providerTwo = new Provider(Guid.NewGuid(), "Jamie Handy");
+        providerTwo.AddAvailability(DateTime.UtcNow.Date.AddDays(1).AddHours(8), DateTime.UtcNow.Date.AddDays(1).AddHours(16));
+
         var job = new Job(
             Guid.NewGuid(),
             Guid.NewGuid(),
@@ -34,6 +37,7 @@ public sealed class DevSeeder
             DateTime.UtcNow.Date.AddDays(1).AddHours(12));
 
         dbContext.Providers.Add(provider);
+        dbContext.Providers.Add(providerTwo);
         dbContext.Jobs.Add(job);
         dbContext.Bookings.Add(booking);
 

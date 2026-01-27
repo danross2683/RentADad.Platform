@@ -46,6 +46,12 @@ namespace RentADad.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("JobId");
+
+                    b.HasIndex("ProviderId");
+
+                    b.HasIndex("Status");
+
                     b.ToTable("bookings", (string)null);
                 });
 
@@ -71,6 +77,10 @@ namespace RentADad.Infrastructure.Migrations
                         .HasColumnType("text");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CustomerId");
+
+                    b.HasIndex("Status");
 
                     b.ToTable("jobs", (string)null);
                 });

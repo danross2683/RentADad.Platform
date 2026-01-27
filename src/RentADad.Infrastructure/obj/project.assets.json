@@ -1382,6 +1382,7 @@
         "framework": ".NETCoreApp,Version=v10.0",
         "dependencies": {
           "FluentValidation": "12.1.1",
+          "Microsoft.Extensions.Logging.Abstractions": "10.0.0",
           "RentADad.Domain": "1.0.0"
         },
         "compile": {

@@ -59,6 +59,19 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.Use(async (context, next) =>
+{
+    if (!context.Request.Headers.TryGetValue("X-Correlation-Id", out var correlationId) || string.IsNullOrWhiteSpace(correlationId))
+    {
+        correlationId = Guid.NewGuid().ToString("N");
+    }
+
+    context.TraceIdentifier = correlationId!;
+    context.Response.Headers["X-Correlation-Id"] = correlationId!;
+
+    await next();
+});
+
 if (app.Environment.IsDevelopment())
 {
     using var scope = app.Services.CreateScope();
@@ -264,7 +277,7 @@ static Dictionary<string, string[]> ToProblem(ValidationResult validation)
             group => group.Select(error => error.ErrorMessage).ToArray());
 }
 
-static ProblemHttpResult CreateProblem(int statusCode, string errorCode, string detail)
+static IResult CreateProblem(int statusCode, string errorCode, string detail)
 {
     return Results.Problem(
         statusCode: statusCode,

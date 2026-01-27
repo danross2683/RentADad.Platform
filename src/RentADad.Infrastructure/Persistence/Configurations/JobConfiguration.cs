@@ -16,6 +16,9 @@ public sealed class JobConfiguration : IEntityTypeConfiguration<Job>
         builder.Property(job => job.Status).HasConversion<string>().IsRequired();
         builder.Property(job => job.ActiveBookingId);
 
+        builder.HasIndex(job => job.CustomerId);
+        builder.HasIndex(job => job.Status);
+
         builder.OwnsMany(
             job => job.Services,
             services =>
@@ -23,6 +26,7 @@ public sealed class JobConfiguration : IEntityTypeConfiguration<Job>
                 services.ToTable("job_services");
                 services.WithOwner().HasForeignKey("JobId");
                 services.HasKey(s => s.Id);
+                services.Property(s => s.Id).ValueGeneratedNever();
                 services.Property(s => s.ServiceId).IsRequired();
             });
 

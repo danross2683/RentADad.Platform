@@ -9,7 +9,7 @@ public sealed class CreateJobRequestValidator : AbstractValidator<CreateJobReque
     {
         RuleFor(x => x.CustomerId).NotEmpty();
         RuleFor(x => x.Location).NotEmpty().MaximumLength(256);
-        RuleFor(x => x.ServiceIds).NotNull();
+        RuleFor(x => x.ServiceIds).NotNull().NotEmpty();
         RuleForEach(x => x.ServiceIds).NotEmpty();
     }
 }

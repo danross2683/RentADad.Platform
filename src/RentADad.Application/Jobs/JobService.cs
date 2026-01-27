@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using RentADad.Application.Abstractions.Persistence;
 using RentADad.Application.Abstractions.Repositories;
 using RentADad.Application.Jobs.Requests;
@@ -16,11 +17,13 @@ public sealed class JobService
 {
     private readonly IJobRepository _jobs;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ILogger<JobService> _logger;
 
-    public JobService(IJobRepository jobs, IUnitOfWork unitOfWork)
+    public JobService(IJobRepository jobs, IUnitOfWork unitOfWork, ILogger<JobService> logger)
     {
         _jobs = jobs;
         _unitOfWork = unitOfWork;
+        _logger = logger;
     }
 
     public async Task<List<JobResponse>> ListAsync(CancellationToken cancellationToken = default)
@@ -45,6 +48,7 @@ public sealed class JobService
                 request.Location ?? string.Empty,
                 request.ServiceIds ?? new List<Guid>());
 
+            _logger.LogInformation("Job created {JobId} for customer {CustomerId}", job.Id, job.CustomerId);
             _jobs.Add(job);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
             return ToResponse(job);
@@ -69,6 +73,7 @@ public sealed class JobService
                 job.AddService(serviceId);
             }
 
+            _logger.LogInformation("Job updated {JobId}", job.Id);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
             return ToResponse(job);
         }
@@ -99,6 +104,7 @@ public sealed class JobService
                 }
             }
 
+            _logger.LogInformation("Job patched {JobId}", job.Id);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
             return ToResponse(job);
         }
@@ -154,6 +160,7 @@ public sealed class JobService
         try
         {
             action(job);
+            _logger.LogInformation("Job lifecycle transition {JobId} -> {Status}", job.Id, job.Status);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
             return ToResponse(job);
         }

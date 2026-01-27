@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using RentADad.Application.Abstractions.Persistence;
 using RentADad.Application.Abstractions.Repositories;
 using RentADad.Application.Bookings.Requests;
@@ -14,11 +15,13 @@ public sealed class BookingService
 {
     private readonly IBookingRepository _bookings;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ILogger<BookingService> _logger;
 
-    public BookingService(IBookingRepository bookings, IUnitOfWork unitOfWork)
+    public BookingService(IBookingRepository bookings, IUnitOfWork unitOfWork, ILogger<BookingService> logger)
     {
         _bookings = bookings;
         _unitOfWork = unitOfWork;
+        _logger = logger;
     }
 
     public async Task<BookingResponse?> GetAsync(Guid bookingId, CancellationToken cancellationToken = default)
@@ -41,6 +44,7 @@ public sealed class BookingService
                 request.EndUtc);
 
             _bookings.Add(booking);
+            _logger.LogInformation("Booking created {BookingId} for job {JobId}", booking.Id, booking.JobId);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
             return ToResponse(booking);
         }
@@ -85,6 +89,7 @@ public sealed class BookingService
         try
         {
             action(booking);
+            _logger.LogInformation("Booking status changed {BookingId} -> {Status}", booking.Id, booking.Status);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
             return ToResponse(booking);
         }

@@ -16,5 +16,9 @@ public sealed class BookingConfiguration : IEntityTypeConfiguration<Booking>
         builder.Property(booking => booking.StartUtc).IsRequired();
         builder.Property(booking => booking.EndUtc).IsRequired();
         builder.Property(booking => booking.Status).HasConversion<string>().IsRequired();
+
+        builder.HasIndex(booking => booking.JobId);
+        builder.HasIndex(booking => booking.ProviderId);
+        builder.HasIndex(booking => booking.Status);
     }
 }
