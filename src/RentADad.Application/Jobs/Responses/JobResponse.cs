@@ -8,4 +8,5 @@ public sealed record JobResponse(
     string Location,
     Guid[] ServiceIds,
     string Status,
-    Guid? ActiveBookingId);
+    Guid? ActiveBookingId,
+    DateTime UpdatedUtc);

@@ -15,6 +15,7 @@ public sealed class JobConfiguration : IEntityTypeConfiguration<Job>
         builder.Property(job => job.Location).HasMaxLength(256).IsRequired();
         builder.Property(job => job.Status).HasConversion<string>().IsRequired();
         builder.Property(job => job.ActiveBookingId);
+        builder.Property(job => job.UpdatedUtc).IsRequired().IsConcurrencyToken();
 
         builder.HasIndex(job => job.CustomerId);
         builder.HasIndex(job => job.Status);

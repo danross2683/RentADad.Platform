@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using RentADad.Application.Abstractions.Persistence;
 using RentADad.Application.Abstractions.Repositories;
+using RentADad.Application.Common.Paging;
 using RentADad.Application.Jobs.Requests;
 using RentADad.Application.Jobs.Responses;
 using RentADad.Domain.Common;
@@ -30,6 +31,13 @@ public sealed class JobService
     {
         var jobs = await _jobs.ListAsync(cancellationToken);
         return jobs.Select(ToResponse).ToList();
+    }
+
+    public async Task<PagedResult<JobResponse>> ListAsync(JobListQuery query, CancellationToken cancellationToken = default)
+    {
+        var paged = await _jobs.ListAsync(query, cancellationToken);
+        var items = paged.Items.Select(ToResponse).ToList();
+        return new PagedResult<JobResponse>(items, paged.Page, paged.PageSize, paged.TotalCount);
     }
 
     public async Task<JobResponse?> GetAsync(Guid jobId, CancellationToken cancellationToken = default)
@@ -178,7 +186,8 @@ public sealed class JobService
             job.Location,
             job.ServiceIds.ToArray(),
             job.Status.ToString(),
-            job.ActiveBookingId);
+            job.ActiveBookingId,
+            job.UpdatedUtc);
     }
 
     private static string MapJobErrorCode(string message)

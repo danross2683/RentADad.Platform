@@ -8,14 +8,42 @@ For OpenAPI, run the API in Development and use the OpenAPI document exposed by 
 - Base path: `/api/v1`
 - Content type: `application/json`
 - Dates: ISO-8601 UTC (`2026-01-27T12:00:00Z`)
+- Responses include `ETag` for resource representations.
 
 ## Jobs
+
+### List Jobs (paged)
+
+`GET /api/v1/jobs/search?page=1&pageSize=50&status=Posted&customerId=...`
+
+Response (200):
+```json
+{
+  "items": [
+    {
+      "id": "bc1270b0-6f54-4bce-b64a-b6031c50d93b",
+      "customerId": "c4108f2c-9b0b-45c3-8fa6-fb6c2b0e17a2",
+      "location": "Wellington",
+      "serviceIds": [
+        "0e0fd1e0-6f45-4b92-b8a2-35a8dfb5b91f"
+      ],
+      "status": "Posted",
+      "activeBookingId": null,
+      "updatedUtc": "2026-01-27T12:05:00Z"
+    }
+  ],
+  "page": 1,
+  "pageSize": 50,
+  "totalCount": 1
+}
+```
 
 ### Create Job
 
 `POST /api/v1/jobs`
 
 Request:
+
 ```json
 {
   "customerId": "c4108f2c-9b0b-45c3-8fa6-fb6c2b0e17a2",
@@ -28,6 +56,7 @@ Request:
 ```
 
 Response (201):
+
 ```json
 {
   "id": "bc1270b0-6f54-4bce-b64a-b6031c50d93b",
@@ -38,7 +67,8 @@ Response (201):
     "6b6a1f2e-27c4-4978-bb4b-1ad39ad6e8a0"
   ],
   "status": "Draft",
-  "activeBookingId": null
+  "activeBookingId": null,
+  "updatedUtc": "2026-01-27T12:00:00Z"
 }
 ```
 
@@ -47,6 +77,7 @@ Response (201):
 `PUT /api/v1/jobs/{jobId}`
 
 Request:
+
 ```json
 {
   "location": "Auckland",
@@ -61,6 +92,7 @@ Request:
 `PATCH /api/v1/jobs/{jobId}`
 
 Request:
+
 ```json
 {
   "location": "Hamilton"
@@ -78,6 +110,7 @@ Request:
 - `POST /api/v1/jobs/{jobId}:cancel`
 
 Accept request:
+
 ```json
 {
   "bookingId": "e9bdf01c-0b16-4d36-ae01-329f6c2f02b9"
@@ -92,6 +125,7 @@ Response (200): `JobResponse` (same shape as Create response).
 - `GET /api/v1/jobs/{jobId}`
 
 Response (200):
+
 ```json
 {
   "id": "bc1270b0-6f54-4bce-b64a-b6031c50d93b",
@@ -101,17 +135,43 @@ Response (200):
     "0e0fd1e0-6f45-4b92-b8a2-35a8dfb5b91f"
   ],
   "status": "Posted",
-  "activeBookingId": null
+  "activeBookingId": null,
+  "updatedUtc": "2026-01-27T12:05:00Z"
 }
 ```
 
 ## Bookings
+
+### List Bookings (paged)
+
+`GET /api/v1/bookings/search?page=1&pageSize=50&status=Pending&providerId=...`
+
+Response (200):
+```json
+{
+  "items": [
+    {
+      "id": "e9bdf01c-0b16-4d36-ae01-329f6c2f02b9",
+      "jobId": "bc1270b0-6f54-4bce-b64a-b6031c50d93b",
+      "providerId": "a1b7a0d2-7b2a-47e3-8c58-a3d69246c64c",
+      "startUtc": "2026-01-30T08:00:00Z",
+      "endUtc": "2026-01-30T10:00:00Z",
+      "status": "Pending",
+      "updatedUtc": "2026-01-27T12:10:00Z"
+    }
+  ],
+  "page": 1,
+  "pageSize": 50,
+  "totalCount": 1
+}
+```
 
 ### Create Booking
 
 `POST /api/v1/bookings`
 
 Request:
+
 ```json
 {
   "jobId": "bc1270b0-6f54-4bce-b64a-b6031c50d93b",
@@ -122,6 +182,7 @@ Request:
 ```
 
 Response (201):
+
 ```json
 {
   "id": "e9bdf01c-0b16-4d36-ae01-329f6c2f02b9",
@@ -129,7 +190,8 @@ Response (201):
   "providerId": "a1b7a0d2-7b2a-47e3-8c58-a3d69246c64c",
   "startUtc": "2026-01-30T08:00:00Z",
   "endUtc": "2026-01-30T10:00:00Z",
-  "status": "Pending"
+  "status": "Pending",
+  "updatedUtc": "2026-01-27T12:10:00Z"
 }
 ```
 
@@ -147,6 +209,7 @@ Response (200): `BookingResponse` (same shape as Create response).
 `GET /api/v1/bookings/{bookingId}`
 
 Response (200):
+
 ```json
 {
   "id": "e9bdf01c-0b16-4d36-ae01-329f6c2f02b9",
@@ -154,17 +217,40 @@ Response (200):
   "providerId": "a1b7a0d2-7b2a-47e3-8c58-a3d69246c64c",
   "startUtc": "2026-01-30T08:00:00Z",
   "endUtc": "2026-01-30T10:00:00Z",
-  "status": "Confirmed"
+  "status": "Confirmed",
+  "updatedUtc": "2026-01-27T12:15:00Z"
 }
 ```
 
 ## Providers
+
+### List Providers (paged)
+
+`GET /api/v1/providers/search?page=1&pageSize=50&displayName=dad`
+
+Response (200):
+```json
+{
+  "items": [
+    {
+      "id": "a1b7a0d2-7b2a-47e3-8c58-a3d69246c64c",
+      "displayName": "Rent-A-Dad Joe",
+      "availabilities": [],
+      "updatedUtc": "2026-01-27T12:20:00Z"
+    }
+  ],
+  "page": 1,
+  "pageSize": 50,
+  "totalCount": 1
+}
+```
 
 ### Register Provider
 
 `POST /api/v1/providers`
 
 Request:
+
 ```json
 {
   "providerId": "a1b7a0d2-7b2a-47e3-8c58-a3d69246c64c",
@@ -173,11 +259,13 @@ Request:
 ```
 
 Response (201):
+
 ```json
 {
   "id": "a1b7a0d2-7b2a-47e3-8c58-a3d69246c64c",
   "displayName": "Rent-A-Dad Joe",
-  "availabilities": []
+  "availabilities": [],
+  "updatedUtc": "2026-01-27T12:20:00Z"
 }
 ```
 
@@ -186,6 +274,7 @@ Response (201):
 `PUT /api/v1/providers/{providerId}`
 
 Request:
+
 ```json
 {
   "displayName": "Rent-A-Dad Joseph"
@@ -197,6 +286,7 @@ Request:
 `POST /api/v1/providers/{providerId}/availability`
 
 Request:
+
 ```json
 {
   "startUtc": "2026-02-01T09:00:00Z",
@@ -205,6 +295,7 @@ Request:
 ```
 
 Response (200):
+
 ```json
 {
   "id": "a1b7a0d2-7b2a-47e3-8c58-a3d69246c64c",
@@ -215,7 +306,8 @@ Response (200):
       "startUtc": "2026-02-01T09:00:00Z",
       "endUtc": "2026-02-01T12:00:00Z"
     }
-  ]
+  ],
+  "updatedUtc": "2026-01-27T12:25:00Z"
 }
 ```
 
@@ -236,12 +328,15 @@ Response (200): `ProviderResponse`.
 All errors use ProblemDetails (RFC 7807). Domain errors include an `errorCode` extension.
 
 Example:
+
 ```json
 {
   "type": "about:blank",
   "title": "Domain rule violation",
   "status": 409,
   "detail": "Availability windows must not overlap.",
-  "errorCode": "provider_availability_overlap"
+  "errorCode": "provider_availability_overlap",
+  "traceId": "0af7651916cd43dd8448eb211c80319c",
+  "version": "v1"
 }
 ```

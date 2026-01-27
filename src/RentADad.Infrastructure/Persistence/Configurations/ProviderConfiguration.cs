@@ -12,6 +12,7 @@ public sealed class ProviderConfiguration : IEntityTypeConfiguration<Provider>
         builder.HasKey(provider => provider.Id);
 
         builder.Property(provider => provider.DisplayName).HasMaxLength(200).IsRequired();
+        builder.Property(provider => provider.UpdatedUtc).IsRequired().IsConcurrencyToken();
 
         builder.OwnsMany(
             provider => provider.Availabilities,
@@ -23,6 +24,8 @@ public sealed class ProviderConfiguration : IEntityTypeConfiguration<Provider>
                 availabilities.Property(a => a.Id).ValueGeneratedNever();
                 availabilities.Property(a => a.StartUtc).IsRequired();
                 availabilities.Property(a => a.EndUtc).IsRequired();
+                availabilities.HasIndex("ProviderId", "StartUtc", "EndUtc")
+                    .HasDatabaseName("IX_provider_availability_provider_window");
             });
 
         builder.Navigation(provider => provider.Availabilities).UsePropertyAccessMode(PropertyAccessMode.Field);

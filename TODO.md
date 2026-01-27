@@ -20,9 +20,9 @@
 
 ### P1 Data & Persistence
 
-- [ ] Add concurrency handling strategy for updates (rowversion or retry)
-- [ ] Add indexes for availability window search
-- [ ] Add pagination + filtering for list endpoints
+- [x] Add concurrency handling strategy for updates (rowversion or retry)
+- [x] Add indexes for availability window search
+- [x] Add pagination + filtering for list endpoints
 
 ### P1 Observability
 

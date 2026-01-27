@@ -2,6 +2,8 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
+using RentADad.Application.Common.Paging;
+using RentADad.Application.Providers.Requests;
 using RentADad.Application.Abstractions.Repositories;
 using RentADad.Domain.Providers;
 
@@ -14,6 +16,30 @@ public sealed class ProviderRepository : IProviderRepository
     public ProviderRepository(AppDbContext dbContext)
     {
         _dbContext = dbContext;
+    }
+
+    public async Task<PagedResult<Provider>> ListAsync(ProviderListQuery query, CancellationToken cancellationToken = default)
+    {
+        var providers = _dbContext.Providers
+            .AsNoTracking()
+            .Include(provider => provider.Availabilities)
+            .AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(query.DisplayNameContains))
+        {
+            var term = query.DisplayNameContains.Trim();
+            providers = providers.Where(provider => EF.Functions.ILike(provider.DisplayName, $"%{term}%"));
+        }
+
+        var total = await providers.CountAsync(cancellationToken);
+        var items = await providers
+            .OrderByDescending(provider => provider.UpdatedUtc)
+            .ThenBy(provider => provider.Id)
+            .Skip((query.Page - 1) * query.PageSize)
+            .Take(query.PageSize)
+            .ToListAsync(cancellationToken);
+
+        return new PagedResult<Provider>(items, query.Page, query.PageSize, total);
     }
 
     public Task<Provider?> GetByIdAsync(Guid providerId, CancellationToken cancellationToken = default)

@@ -8,4 +8,5 @@ public sealed record BookingResponse(
     Guid ProviderId,
     DateTime StartUtc,
     DateTime EndUtc,
-    string Status);
+    string Status,
+    DateTime UpdatedUtc);

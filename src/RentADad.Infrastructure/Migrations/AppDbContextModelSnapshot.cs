@@ -44,11 +44,17 @@ namespace RentADad.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<DateTime>("UpdatedUtc")
+                        .IsConcurrencyToken()
+                        .HasColumnType("timestamp with time zone");
+
                     b.HasKey("Id");
 
                     b.HasIndex("JobId");
 
                     b.HasIndex("ProviderId");
+
+                    b.HasIndex(new[] { "ProviderId", "StartUtc", "EndUtc" }, "IX_bookings_provider_window");
 
                     b.HasIndex("Status");
 
@@ -76,6 +82,10 @@ namespace RentADad.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<DateTime>("UpdatedUtc")
+                        .IsConcurrencyToken()
+                        .HasColumnType("timestamp with time zone");
+
                     b.HasKey("Id");
 
                     b.HasIndex("CustomerId");
@@ -95,6 +105,10 @@ namespace RentADad.Infrastructure.Migrations
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime>("UpdatedUtc")
+                        .IsConcurrencyToken()
+                        .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
 
@@ -148,6 +162,8 @@ namespace RentADad.Infrastructure.Migrations
                             b1.HasKey("Id");
 
                             b1.HasIndex("ProviderId");
+
+                            b1.HasIndex(new[] { "ProviderId", "StartUtc", "EndUtc" }, "IX_provider_availability_provider_window");
 
                             b1.ToTable("provider_availability", (string)null);
 

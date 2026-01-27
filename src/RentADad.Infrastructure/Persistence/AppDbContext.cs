@@ -20,4 +20,31 @@ public sealed class AppDbContext : DbContext
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
     }
+
+    public override int SaveChanges()
+    {
+        ApplyUpdatedUtc();
+        return base.SaveChanges();
+    }
+
+    public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        ApplyUpdatedUtc();
+        return base.SaveChangesAsync(cancellationToken);
+    }
+
+    private void ApplyUpdatedUtc()
+    {
+        var utcNow = DateTime.UtcNow;
+
+        foreach (var entry in ChangeTracker.Entries())
+        {
+            if (entry.State is not (EntityState.Added or EntityState.Modified)) continue;
+
+            if (entry.Entity is Job or Booking or Provider)
+            {
+                entry.Property("UpdatedUtc").CurrentValue = utcNow;
+            }
+        }
+    }
 }

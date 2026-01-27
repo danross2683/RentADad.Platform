@@ -12,6 +12,7 @@ public sealed class Job
     private Job()
     {
         Location = string.Empty;
+        UpdatedUtc = DateTime.UtcNow;
     }
 
     public Job(Guid id, Guid customerId, string location, IEnumerable<Guid> serviceIds)
@@ -25,6 +26,7 @@ public sealed class Job
         Location = location ?? string.Empty;
         _services.AddRange(serviceIds.Where(s => s != Guid.Empty).Select(id => new JobService(Guid.NewGuid(), id)));
         Status = JobStatus.Draft;
+        UpdatedUtc = DateTime.UtcNow;
     }
 
     public Guid Id { get; }
@@ -34,6 +36,7 @@ public sealed class Job
     public IReadOnlyCollection<JobService> Services => _services;
     public JobStatus Status { get; private set; }
     public Guid? ActiveBookingId { get; private set; }
+    public DateTime UpdatedUtc { get; private set; }
 
     public void UpdateLocation(string location)
     {

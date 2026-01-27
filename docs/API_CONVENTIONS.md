@@ -35,6 +35,7 @@ This document defines the initial API surface area and naming conventions.
 ### Jobs
 
 - `GET /api/v1/jobs`
+- `GET /api/v1/jobs/search?page=1&pageSize=50&status=Posted&customerId=...`
 - `GET /api/v1/jobs/{jobId}`
 - `POST /api/v1/jobs`
 - `PUT /api/v1/jobs/{jobId}`
@@ -49,7 +50,7 @@ This document defines the initial API surface area and naming conventions.
 
 ### Bookings
 
-- `GET /api/v1/bookings`
+- `GET /api/v1/bookings/search?page=1&pageSize=50&status=Pending&jobId=...&providerId=...`
 - `GET /api/v1/bookings/{bookingId}`
 - `POST /api/v1/bookings`
 - `PUT /api/v1/bookings/{bookingId}`
@@ -61,7 +62,7 @@ This document defines the initial API surface area and naming conventions.
 
 ### Providers
 
-- `GET /api/v1/providers`
+- `GET /api/v1/providers/search?page=1&pageSize=50&displayName=...`
 - `GET /api/v1/providers/{providerId}`
 - `POST /api/v1/providers`
 - `PUT /api/v1/providers/{providerId}`

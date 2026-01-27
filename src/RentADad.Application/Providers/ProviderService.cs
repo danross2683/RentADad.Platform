@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using RentADad.Application.Abstractions.Persistence;
 using RentADad.Application.Abstractions.Repositories;
+using RentADad.Application.Common.Paging;
 using RentADad.Application.Providers.Requests;
 using RentADad.Application.Providers.Responses;
 using RentADad.Domain.Common;
@@ -29,6 +30,13 @@ public sealed class ProviderService
     {
         var provider = await _providers.GetByIdAsync(providerId, cancellationToken);
         return provider is null ? null : ToResponse(provider);
+    }
+
+    public async Task<PagedResult<ProviderResponse>> ListAsync(ProviderListQuery query, CancellationToken cancellationToken = default)
+    {
+        var paged = await _providers.ListAsync(query, cancellationToken);
+        var items = paged.Items.Select(ToResponse).ToList();
+        return new PagedResult<ProviderResponse>(items, paged.Page, paged.PageSize, paged.TotalCount);
     }
 
     public async Task<ProviderResponse> RegisterAsync(RegisterProviderRequest request, CancellationToken cancellationToken = default)
@@ -99,7 +107,7 @@ public sealed class ProviderService
             .Select(a => new ProviderAvailabilityResponse(a.Id, a.StartUtc, a.EndUtc))
             .ToList();
 
-        return new ProviderResponse(provider.Id, provider.DisplayName, availabilities);
+        return new ProviderResponse(provider.Id, provider.DisplayName, availabilities, provider.UpdatedUtc);
     }
 
     private static string MapProviderErrorCode(string message)

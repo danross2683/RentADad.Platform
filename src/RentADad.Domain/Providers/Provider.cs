@@ -12,6 +12,7 @@ public sealed class Provider
     private Provider()
     {
         DisplayName = string.Empty;
+        UpdatedUtc = DateTime.UtcNow;
     }
 
     public Provider(Guid id, string displayName)
@@ -20,11 +21,13 @@ public sealed class Provider
 
         Id = id;
         DisplayName = displayName ?? string.Empty;
+        UpdatedUtc = DateTime.UtcNow;
     }
 
     public Guid Id { get; }
     public string DisplayName { get; private set; }
     public IReadOnlyCollection<ProviderAvailability> Availabilities => _availabilities;
+    public DateTime UpdatedUtc { get; private set; }
 
     public void UpdateDisplayName(string displayName)
     {

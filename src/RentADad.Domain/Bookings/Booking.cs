@@ -7,6 +7,7 @@ public sealed class Booking
 {
     private Booking()
     {
+        UpdatedUtc = DateTime.UtcNow;
     }
 
     public Booking(Guid id, Guid jobId, Guid providerId, DateTime startUtc, DateTime endUtc)
@@ -22,6 +23,7 @@ public sealed class Booking
         StartUtc = startUtc;
         EndUtc = endUtc;
         Status = BookingStatus.Pending;
+        UpdatedUtc = DateTime.UtcNow;
     }
 
     public Guid Id { get; }
@@ -30,6 +32,7 @@ public sealed class Booking
     public DateTime StartUtc { get; }
     public DateTime EndUtc { get; }
     public BookingStatus Status { get; private set; }
+    public DateTime UpdatedUtc { get; private set; }
 
     public void Confirm()
     {

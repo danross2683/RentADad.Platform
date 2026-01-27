@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
+using RentADad.Application.Common.Paging;
+using RentADad.Application.Jobs.Requests;
 using RentADad.Application.Abstractions.Repositories;
 using RentADad.Domain.Jobs;
 
@@ -23,6 +25,34 @@ public sealed class JobRepository : IJobRepository
             .AsNoTracking()
             .Include(job => job.Services)
             .ToListAsync(cancellationToken);
+    }
+
+    public async Task<PagedResult<Job>> ListAsync(JobListQuery query, CancellationToken cancellationToken = default)
+    {
+        var jobs = _dbContext.Jobs
+            .AsNoTracking()
+            .Include(job => job.Services)
+            .AsQueryable();
+
+        if (query.CustomerId is not null)
+        {
+            jobs = jobs.Where(job => job.CustomerId == query.CustomerId);
+        }
+
+        if (query.Status is not null)
+        {
+            jobs = jobs.Where(job => job.Status == query.Status);
+        }
+
+        var total = await jobs.CountAsync(cancellationToken);
+        var items = await jobs
+            .OrderByDescending(job => job.UpdatedUtc)
+            .ThenBy(job => job.Id)
+            .Skip((query.Page - 1) * query.PageSize)
+            .Take(query.PageSize)
+            .ToListAsync(cancellationToken);
+
+        return new PagedResult<Job>(items, query.Page, query.PageSize, total);
     }
 
     public Task<Job?> GetByIdAsync(Guid jobId, CancellationToken cancellationToken = default)
