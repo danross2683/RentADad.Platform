@@ -162,6 +162,12 @@ Swagger / OpenAPI will be available locally for exploration.
 See `docs/DEV_SETUP.md` for environment variables, ports, and secrets.
 See `docs/API_CONVENTIONS.md` for initial API surface area and naming conventions.
 See `docs/DOMAIN_RULES.md` for lifecycle, invariants, and event definitions.
+See `docs/APPLICATION_GUIDE.md` for use cases, DTOs, and error handling patterns.
+See `docs/INFRASTRUCTURE_GUIDE.md` for persistence and EF Core patterns.
+See `docs/API_GUIDE.md` for API scaffolding, auth, and OpenAPI guidance.
+See `docs/TESTING_GUIDE.md` for domain and application testing scope.
+See `docs/adr/0001-template.md` for ADR template.
+See `docs/diagrams/LIFECYCLE_NOTES.md` for lifecycle diagram notes.
 
 ## Non-Goals
 

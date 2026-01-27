@@ -15,28 +15,28 @@
 
 ## Application
 
-- [ ] Create core use cases for job posting and booking
-- [ ] Add request/response DTOs and validators
-- [ ] Add application-level error handling patterns
+- [x] Create core use cases for job posting and booking
+- [x] Add request/response DTOs and validators
+- [x] Add application-level error handling patterns
 
 ## Infrastructure
 
-- [ ] Set up EF Core mappings for aggregates
-- [ ] Add PostgreSQL migration baseline
-- [ ] Wire up persistence + unit of work pattern
+- [x] Set up EF Core mappings for aggregates
+- [x] Add PostgreSQL migration baseline
+- [x] Wire up persistence + unit of work pattern
 
 ## API
 
-- [ ] Scaffold initial endpoints for jobs and bookings
-- [ ] Add auth policy scaffolding (JWT)
-- [ ] Enable OpenAPI docs with versioning
+- [x] Scaffold initial endpoints for jobs and bookings
+- [x] Add auth policy scaffolding (JWT)
+- [x] Enable OpenAPI docs with versioning
 
 ## Tests
 
-- [ ] Add domain unit tests for lifecycle transitions
-- [ ] Add application tests for use cases
+- [x] Add domain unit tests for lifecycle transitions
+- [x] Add application tests for use cases
 
 ## Documentation
 
-- [ ] Add architecture decision record template
-- [ ] Document lifecycle diagrams (job, booking, provider)
+- [x] Add architecture decision record template
+- [x] Document lifecycle diagrams (job, booking, provider)
