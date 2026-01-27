@@ -1,8 +1,16 @@
 using System.Linq;
+using System.Text;
+using System.Threading.RateLimiting;
+using System.Diagnostics;
 using FluentValidation;
 using FluentValidation.Results;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.IdentityModel.Tokens;
+using RentADad.Api.Health;
 using RentADad.Application.Abstractions.Persistence;
 using RentADad.Application.Abstractions.Repositories;
 using RentADad.Application.Bookings;
@@ -21,6 +29,8 @@ using RentADad.Infrastructure.Persistence.Repositories;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Configuration.AddEnvironmentVariables(prefix: "RentADad_");
+
+ValidateConfiguration(builder.Configuration, builder.Environment);
 
 builder.Services.AddOpenApi();
 builder.Services.AddDbContext<AppDbContext>(options =>
@@ -49,6 +59,52 @@ builder.Services.AddScoped<ProviderService>();
 builder.Services.AddValidatorsFromAssemblyContaining<CreateJobRequestValidator>();
 builder.Services.AddProblemDetails();
 builder.Services.AddScoped<DevSeeder>();
+builder.Services.AddHealthChecks()
+    .AddCheck("self", () => HealthCheckResult.Healthy(), tags: new[] { "live" })
+    .AddCheck<DbReadyHealthCheck>("db", tags: new[] { "ready" });
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            "global",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 60,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst
+            }));
+});
+
+var authEnabled = builder.Configuration.GetValue("Auth:Enabled", false);
+if (authEnabled)
+{
+    builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+        .AddJwtBearer(options =>
+        {
+            options.RequireHttpsMetadata = true;
+            options.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+                ValidIssuer = builder.Configuration["Auth:Issuer"],
+                ValidateAudience = true,
+                ValidAudience = builder.Configuration["Auth:Audience"],
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKey = new SymmetricSecurityKey(
+                    Encoding.UTF8.GetBytes(builder.Configuration["Auth:SigningKey"] ?? string.Empty)),
+                ValidateLifetime = true,
+                ClockSkew = TimeSpan.FromMinutes(2)
+            };
+        });
+
+    builder.Services.AddAuthorization(options =>
+    {
+        options.FallbackPolicy = new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder()
+            .RequireAuthenticatedUser()
+            .Build();
+    });
+}
 
 var app = builder.Build();
 
@@ -57,6 +113,13 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
+if (authEnabled)
+{
+    app.UseAuthentication();
+    app.UseAuthorization();
+}
+
+app.UseRateLimiter();
 app.UseHttpsRedirection();
 
 app.Use(async (context, next) =>
@@ -68,9 +131,28 @@ app.Use(async (context, next) =>
 
     context.TraceIdentifier = correlationId!;
     context.Response.Headers["X-Correlation-Id"] = correlationId!;
+    context.Response.Headers["X-Api-Version"] = ApiVersion.Current;
 
     await next();
 });
+
+app.MapHealthChecks("/health/live", new HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("live")
+});
+
+app.MapHealthChecks("/health/ready", new HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("ready")
+});
+
+var autoMigrate = app.Configuration.GetValue("Database:AutoMigrate", true);
+if (autoMigrate && !app.Environment.IsEnvironment("Testing"))
+{
+    using var scope = app.Services.CreateScope();
+    var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    await dbContext.Database.MigrateAsync();
+}
 
 if (app.Environment.IsDevelopment())
 {
@@ -110,18 +192,18 @@ jobs.MapGet("/", async (JobService jobService) =>
 {
     var results = await jobService.ListAsync();
     return Results.Ok(results);
-});
+}).AllowAnonymous();
 
 jobs.MapGet("/{jobId:guid}", async (JobService jobService, Guid jobId) =>
 {
     var job = await jobService.GetAsync(jobId);
     return job is null ? Results.NotFound() : Results.Ok(job);
-});
+}).AllowAnonymous();
 
 jobs.MapPost("/", async (JobService jobService, IValidator<CreateJobRequest> validator, CreateJobRequest request) =>
 {
     var validation = await validator.ValidateAsync(request);
-    if (!validation.IsValid) return Results.ValidationProblem(ToProblem(validation));
+    if (!validation.IsValid) return Results.ValidationProblem(ToProblem(validation), extensions: BuildProblemExtensions());
 
     var job = await jobService.CreateAsync(request);
     return Results.Created($"/api/v1/jobs/{job.Id}", job);
@@ -130,7 +212,7 @@ jobs.MapPost("/", async (JobService jobService, IValidator<CreateJobRequest> val
 jobs.MapPut("/{jobId:guid}", async (JobService jobService, IValidator<UpdateJobRequest> validator, Guid jobId, UpdateJobRequest request) =>
 {
     var validation = await validator.ValidateAsync(request);
-    if (!validation.IsValid) return Results.ValidationProblem(ToProblem(validation));
+    if (!validation.IsValid) return Results.ValidationProblem(ToProblem(validation), extensions: BuildProblemExtensions());
 
     var job = await jobService.UpdateAsync(jobId, request);
     return job is null ? Results.NotFound() : Results.Ok(job);
@@ -139,7 +221,7 @@ jobs.MapPut("/{jobId:guid}", async (JobService jobService, IValidator<UpdateJobR
 jobs.MapPatch("/{jobId:guid}", async (JobService jobService, IValidator<PatchJobRequest> validator, Guid jobId, PatchJobRequest request) =>
 {
     var validation = await validator.ValidateAsync(request);
-    if (!validation.IsValid) return Results.ValidationProblem(ToProblem(validation));
+    if (!validation.IsValid) return Results.ValidationProblem(ToProblem(validation), extensions: BuildProblemExtensions());
 
     var job = await jobService.PatchAsync(jobId, request);
     return job is null ? Results.NotFound() : Results.Ok(job);
@@ -154,7 +236,7 @@ jobs.MapPost("/{jobId:guid}:post", async (JobService jobService, Guid jobId) =>
 jobs.MapPost("/{jobId:guid}:accept", async (JobService jobService, IValidator<AcceptJobRequest> validator, Guid jobId, AcceptJobRequest request) =>
 {
     var validation = await validator.ValidateAsync(request);
-    if (!validation.IsValid) return Results.ValidationProblem(ToProblem(validation));
+    if (!validation.IsValid) return Results.ValidationProblem(ToProblem(validation), extensions: BuildProblemExtensions());
 
     var job = await jobService.AcceptAsync(jobId, request);
     return job is null ? Results.NotFound() : Results.Ok(job);
@@ -194,12 +276,12 @@ bookings.MapGet("/{bookingId:guid}", async (BookingService bookingService, Guid 
 {
     var booking = await bookingService.GetAsync(bookingId);
     return booking is null ? Results.NotFound() : Results.Ok(booking);
-});
+}).AllowAnonymous();
 
 bookings.MapPost("/", async (BookingService bookingService, IValidator<CreateBookingRequest> validator, CreateBookingRequest request) =>
 {
     var validation = await validator.ValidateAsync(request);
-    if (!validation.IsValid) return Results.ValidationProblem(ToProblem(validation));
+    if (!validation.IsValid) return Results.ValidationProblem(ToProblem(validation), extensions: BuildProblemExtensions());
 
     var booking = await bookingService.CreateAsync(request);
     return Results.Created($"/api/v1/bookings/{booking.Id}", booking);
@@ -233,12 +315,12 @@ providers.MapGet("/{providerId:guid}", async (ProviderService providerService, G
 {
     var provider = await providerService.GetAsync(providerId);
     return provider is null ? Results.NotFound() : Results.Ok(provider);
-});
+}).AllowAnonymous();
 
 providers.MapPost("/", async (ProviderService providerService, IValidator<RegisterProviderRequest> validator, RegisterProviderRequest request) =>
 {
     var validation = await validator.ValidateAsync(request);
-    if (!validation.IsValid) return Results.ValidationProblem(ToProblem(validation));
+    if (!validation.IsValid) return Results.ValidationProblem(ToProblem(validation), extensions: BuildProblemExtensions());
 
     var provider = await providerService.RegisterAsync(request);
     return Results.Created($"/api/v1/providers/{provider.Id}", provider);
@@ -247,7 +329,7 @@ providers.MapPost("/", async (ProviderService providerService, IValidator<Regist
 providers.MapPut("/{providerId:guid}", async (ProviderService providerService, IValidator<UpdateProviderRequest> validator, Guid providerId, UpdateProviderRequest request) =>
 {
     var validation = await validator.ValidateAsync(request);
-    if (!validation.IsValid) return Results.ValidationProblem(ToProblem(validation));
+    if (!validation.IsValid) return Results.ValidationProblem(ToProblem(validation), extensions: BuildProblemExtensions());
 
     var provider = await providerService.UpdateAsync(providerId, request);
     return provider is null ? Results.NotFound() : Results.Ok(provider);
@@ -256,7 +338,7 @@ providers.MapPut("/{providerId:guid}", async (ProviderService providerService, I
 providers.MapPost("/{providerId:guid}/availability", async (ProviderService providerService, IValidator<AddAvailabilityRequest> validator, Guid providerId, AddAvailabilityRequest request) =>
 {
     var validation = await validator.ValidateAsync(request);
-    if (!validation.IsValid) return Results.ValidationProblem(ToProblem(validation));
+    if (!validation.IsValid) return Results.ValidationProblem(ToProblem(validation), extensions: BuildProblemExtensions());
 
     var provider = await providerService.AddAvailabilityAsync(providerId, request);
     return provider is null ? Results.NotFound() : Results.Ok(provider);
@@ -283,7 +365,53 @@ static IResult CreateProblem(int statusCode, string errorCode, string detail)
         statusCode: statusCode,
         title: "Domain rule violation",
         detail: detail,
-        extensions: new Dictionary<string, object?> { ["errorCode"] = errorCode });
+        extensions: BuildProblemExtensions(errorCode));
+}
+
+static Dictionary<string, object?> BuildProblemExtensions(string? errorCode = null)
+{
+    var extensions = new Dictionary<string, object?>
+    {
+        ["traceId"] = Activity.Current?.TraceId.ToString() ?? string.Empty,
+        ["version"] = ApiVersion.Current
+    };
+
+    if (!string.IsNullOrWhiteSpace(errorCode))
+    {
+        extensions["errorCode"] = errorCode;
+    }
+
+    return extensions;
+}
+
+static class ApiVersion
+{
+    public const string Current = "v1";
+}
+
+static void ValidateConfiguration(IConfiguration configuration, IHostEnvironment environment)
+{
+    if (environment.IsEnvironment("Testing")) return;
+
+    var connectionString = configuration.GetConnectionString("Default");
+    if (string.IsNullOrWhiteSpace(connectionString))
+    {
+        throw new InvalidOperationException("ConnectionStrings:Default is required.");
+    }
+
+    if (configuration.GetValue("Auth:Enabled", false))
+    {
+        var issuer = configuration["Auth:Issuer"];
+        var audience = configuration["Auth:Audience"];
+        var signingKey = configuration["Auth:SigningKey"];
+
+        if (string.IsNullOrWhiteSpace(issuer) ||
+            string.IsNullOrWhiteSpace(audience) ||
+            string.IsNullOrWhiteSpace(signingKey))
+        {
+            throw new InvalidOperationException("Auth:Issuer, Auth:Audience, and Auth:SigningKey are required when Auth:Enabled is true.");
+        }
+    }
 }
 
 app.Run();

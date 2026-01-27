@@ -4,17 +4,19 @@
 
 ### P0 Production Readiness
 
-- [ ] Add Dockerfile + docker compose for API (local + CI)
-- [ ] Add health checks (liveness/readiness) + basic probes
-- [ ] Add database migration workflow (startup apply or manual script)
-- [ ] Add configuration validation on startup (required settings)
+- [x] Add Dockerfile + docker compose for API (local + CI)
+- [x] Add health checks (liveness/readiness) + basic probes
+- [x] Add database migration workflow (startup apply or manual script)
+- [x] Add configuration validation on startup (required settings)
+- [x] Define versioning policy for API (SemVer, compatibility rules, deprecation window)
 
 ### P0 API Guardrails
 
-- [ ] Add request/response contracts doc (swagger + examples)
-- [ ] Add rate limiting / throttling defaults
-- [ ] Add auth placeholder (API key or JWT stub)
-- [ ] Add standardized ProblemDetails response shape (errorCode, traceId)
+- [x] Add request/response contracts doc (swagger + examples)
+- [x] Add rate limiting / throttling defaults
+- [x] Add auth placeholder (API key or JWT stub)
+- [x] Add standardized ProblemDetails response shape (errorCode, traceId, version)
+- [x] Introduce API versioning strategy (route or header) + default version
 
 ### P1 Data & Persistence
 

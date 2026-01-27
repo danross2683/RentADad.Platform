@@ -6,6 +6,10 @@ This document defines the initial API structure and policies.
 
 See `docs/API_CONVENTIONS.md` for the v1 endpoints list and naming.
 
+## Contracts
+
+See `docs/API_CONTRACTS.md` for request/response examples.
+
 ## Auth scaffolding (JWT)
 
 - Use bearer token authentication.
