@@ -1,0 +1,6 @@
+C:\Users\danross\source\RentADad.Platform\src\RentADad.Infrastructure\obj\Debug\net9.0\RentADad.Infrastructure.csproj.AssemblyReference.cache
+C:\Users\danross\source\RentADad.Platform\src\RentADad.Infrastructure\obj\Debug\net9.0\RentADad.Infrastructure.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\danross\source\RentADad.Platform\src\RentADad.Infrastructure\obj\Debug\net9.0\RentADad.Infrastructure.AssemblyInfoInputs.cache
+C:\Users\danross\source\RentADad.Platform\src\RentADad.Infrastructure\obj\Debug\net9.0\RentADad.Infrastructure.AssemblyInfo.cs
+C:\Users\danross\source\RentADad.Platform\src\RentADad.Infrastructure\obj\Debug\net9.0\RentADad.Infrastructure.csproj.CoreCompileInputs.cache
+C:\Users\danross\source\RentADad.Platform\src\RentADad.Infrastructure\obj\Debug\net9.0\RentADad.Infrastructure.sourcelink.json

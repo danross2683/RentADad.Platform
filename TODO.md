@@ -1,42 +1,28 @@
 # RentADad.Platform TODO
 
-## Foundations
+## P0 Core Stability
 
-- [x] Confirm .NET SDK LTS version to target (.NET 10 LTS)
-- [x] Add local dev setup notes (env vars, ports, secrets)
-- [x] Define initial API surface area and naming conventions
+- [ ] Add test database setup/teardown for integration tests
+- [ ] Add deterministic test data helpers for Jobs/Bookings/Providers
+- [ ] Add CI-friendly configuration for connection strings
 
-## Domain
+## P1 API Behavior
 
-- [x] Formalize job lifecycle states and transitions
-- [x] Define booking invariants and validation rules
-- [x] Model provider availability constraints
-- [x] Add domain events for state changes
+- [ ] Add Jobs lifecycle integration tests (post/accept/start/complete/close)
+- [ ] Add Booking edge-case tests (double confirm, cancel after confirm, expire)
+- [ ] Add Provider availability tests (overlap rejection, remove availability)
 
-## Application
+## P1 Application
 
-- [x] Create core use cases for job posting and booking
-- [x] Add request/response DTOs and validators
-- [x] Add application-level error handling patterns
+- [ ] Add domain rule error codes for Job/Booking/Provider
+- [ ] Add application-level validation for date/time windows
 
-## Infrastructure
+## P2 Observability
 
-- [x] Set up EF Core mappings for aggregates
-- [x] Add PostgreSQL migration baseline
-- [x] Wire up persistence + unit of work pattern
+- [ ] Add structured logging for lifecycle transitions
+- [ ] Add correlation ID middleware
 
-## API
+## P2 Data
 
-- [x] Scaffold initial endpoints for jobs and bookings
-- [x] Add auth policy scaffolding (JWT)
-- [x] Enable OpenAPI docs with versioning
-
-## Tests
-
-- [x] Add domain unit tests for lifecycle transitions
-- [x] Add application tests for use cases
-
-## Documentation
-
-- [x] Add architecture decision record template
-- [x] Document lifecycle diagrams (job, booking, provider)
+- [ ] Add seed scenario for multi-provider job competition
+- [ ] Add migration for job/booking indexes
