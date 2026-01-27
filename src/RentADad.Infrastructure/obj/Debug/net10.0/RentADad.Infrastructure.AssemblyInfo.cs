@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("RentADad.Infrastructure")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+27a8148aeb967c7acec3882a26434caf1cd3461f")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+b439df8a9c1a323e48aedc57727c1eb262dc298c")]
 [assembly: System.Reflection.AssemblyProductAttribute("RentADad.Infrastructure")]
 [assembly: System.Reflection.AssemblyTitleAttribute("RentADad.Infrastructure")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

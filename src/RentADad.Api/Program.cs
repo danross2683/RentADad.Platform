@@ -10,6 +10,9 @@ using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 using RentADad.Api;
 using RentADad.Api.Health;
 using RentADad.Api.Results;
@@ -81,6 +84,37 @@ builder.Services.AddRateLimiter(options =>
             }));
 });
 
+builder.Services.AddOpenTelemetry()
+    .ConfigureResource(resource =>
+        resource.AddService(serviceName: "RentADad.Api", serviceVersion: ApiVersion.Current))
+    .WithTracing(tracing =>
+        tracing
+            .AddAspNetCoreInstrumentation()
+            .AddHttpClientInstrumentation()
+            .AddOtlpExporter(options =>
+            {
+                var endpoint = builder.Configuration["OpenTelemetry:OtlpEndpoint"];
+                if (!string.IsNullOrWhiteSpace(endpoint))
+                {
+                    options.Endpoint = new Uri(endpoint);
+                }
+            }))
+    .WithMetrics(metrics =>
+        metrics
+            .AddAspNetCoreInstrumentation()
+            .AddHttpClientInstrumentation()
+            .AddRuntimeInstrumentation()
+            .AddProcessInstrumentation()
+            .AddOtlpExporter(options =>
+            {
+                var endpoint = builder.Configuration["OpenTelemetry:OtlpEndpoint"];
+                if (!string.IsNullOrWhiteSpace(endpoint))
+                {
+                    options.Endpoint = new Uri(endpoint);
+                }
+            })
+            .AddPrometheusExporter());
+
 var authEnabled = builder.Configuration.GetValue("Auth:Enabled", false);
 if (authEnabled)
 {
@@ -117,6 +151,8 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
+app.MapPrometheusScrapingEndpoint("/metrics");
+
 if (authEnabled)
 {
     app.UseAuthentication();
@@ -128,6 +164,9 @@ app.UseHttpsRedirection();
 
 app.Use(async (context, next) =>
 {
+    var logger = context.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger("Request");
+    var started = Stopwatch.GetTimestamp();
+
     if (!context.Request.Headers.TryGetValue("X-Correlation-Id", out var correlationId) || string.IsNullOrWhiteSpace(correlationId))
     {
         correlationId = Guid.NewGuid().ToString("N");
@@ -137,7 +176,21 @@ app.Use(async (context, next) =>
     context.Response.Headers["X-Correlation-Id"] = correlationId!;
     context.Response.Headers["X-Api-Version"] = ApiVersion.Current;
 
-    await next();
+    try
+    {
+        await next();
+    }
+    finally
+    {
+        var elapsedMs = Stopwatch.GetElapsedTime(started).TotalMilliseconds;
+        logger.LogInformation(
+            "HTTP {Method} {Path} responded {StatusCode} in {ElapsedMs}ms CorrelationId={CorrelationId}",
+            context.Request.Method,
+            context.Request.Path,
+            context.Response.StatusCode,
+            elapsedMs,
+            context.TraceIdentifier);
+    }
 });
 
 app.MapHealthChecks("/health/live", new HealthCheckOptions
@@ -175,6 +228,14 @@ app.UseExceptionHandler(exceptionApp =>
         {
             return Results.Problem("An unexpected error occurred.").ExecuteAsync(context);
         }
+
+        var logger = context.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger("Errors");
+        logger.LogError(
+            exception,
+            "Unhandled exception for {Method} {Path} CorrelationId={CorrelationId}",
+            context.Request.Method,
+            context.Request.Path,
+            context.TraceIdentifier);
 
         var problem = exception switch
         {

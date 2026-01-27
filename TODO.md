@@ -26,9 +26,9 @@
 
 ### P1 Observability
 
-- [ ] Add OpenTelemetry tracing + basic metrics
-- [ ] Add structured request logging with latency
-- [ ] Add error logging with correlation id
+- [x] Add OpenTelemetry tracing + basic metrics
+- [x] Add structured request logging with latency
+- [x] Add error logging with correlation id
 
 ### P2 Developer Experience
 
