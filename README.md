@@ -91,6 +91,41 @@ Rather than modelling screens or actions, this project models **state and behavi
 
 - Business rules live in the domain, not in controllers.
 
+## Job lifecycle (Mermaid state diagram)
+
+```mermaid
+stateDiagram-v2
+  [*] --> Draft
+
+  Draft --> Posted: publish
+  Draft --> Cancelled: delete_draft
+
+  Posted --> Accepted: provider_accepts
+  Posted --> Cancelled: customer_cancels
+
+  Accepted --> InProgress: work_starts
+  Accepted --> Cancelled: cancel_before_start
+  Accepted --> Expired: acceptance_timeout
+
+  InProgress --> Completed: mark_complete
+  InProgress --> Disputed: raise_dispute
+  InProgress --> Cancelled: cancel_in_progress
+
+  Completed --> Closed: customer_confirms
+  Completed --> Disputed: dispute_after_completion
+
+  Disputed --> Resolved: resolve
+  Resolved --> Closed: close_case
+
+  Expired --> Posted: reopen
+  Cancelled --> [*]
+  Closed --> [*]
+```
+
+**Notes**
+- `Expired` represents time-based transitions (e.g., acceptance window elapsed).
+- `Disputed` captures exception handling paths rather than the happy flow.
+
 ## Project Structure
 
 ```text
@@ -156,3 +191,5 @@ The focus is on **design clarity, domain correctness, and defensible decisions**
 - Separation between orchestration and execution
 
 - The ability to evolve a system intentionally
+
+
