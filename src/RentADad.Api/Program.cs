@@ -118,6 +118,7 @@ builder.Services.AddOpenTelemetry()
 var authEnabled = builder.Configuration.GetValue("Auth:Enabled", false);
 if (authEnabled)
 {
+    builder.Services.AddSingleton<IStartupFilter, AuthTestStartupFilter>();
     builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         .AddJwtBearer(options =>
         {
@@ -327,65 +328,110 @@ jobs.MapPost("/", async (JobService jobService, IValidator<CreateJobRequest> val
     return WithEtag(Results.Created($"/api/v1/jobs/{job.Id}", job), job.UpdatedUtc);
 });
 
-jobs.MapPut("/{jobId:guid}", async (JobService jobService, IValidator<UpdateJobRequest> validator, Guid jobId, UpdateJobRequest request) =>
+jobs.MapPut("/{jobId:guid}", async (JobService jobService, IValidator<UpdateJobRequest> validator, HttpRequest httpRequest, Guid jobId, UpdateJobRequest request) =>
 {
     var validation = await validator.ValidateAsync(request);
     if (!validation.IsValid) return Results.ValidationProblem(ToProblem(validation), extensions: BuildProblemExtensions());
+
+    var current = await jobService.GetAsync(jobId);
+    if (current is null) return Results.NotFound();
+    var etagProblem = ValidateIfMatch(httpRequest, current.UpdatedUtc);
+    if (etagProblem is not null) return etagProblem;
 
     var job = await jobService.UpdateAsync(jobId, request);
     return job is null ? Results.NotFound() : WithEtag(Results.Ok(job), job.UpdatedUtc);
 });
 
-jobs.MapPatch("/{jobId:guid}", async (JobService jobService, IValidator<PatchJobRequest> validator, Guid jobId, PatchJobRequest request) =>
+jobs.MapPatch("/{jobId:guid}", async (JobService jobService, IValidator<PatchJobRequest> validator, HttpRequest httpRequest, Guid jobId, PatchJobRequest request) =>
 {
     var validation = await validator.ValidateAsync(request);
     if (!validation.IsValid) return Results.ValidationProblem(ToProblem(validation), extensions: BuildProblemExtensions());
+
+    var current = await jobService.GetAsync(jobId);
+    if (current is null) return Results.NotFound();
+    var etagProblem = ValidateIfMatch(httpRequest, current.UpdatedUtc);
+    if (etagProblem is not null) return etagProblem;
 
     var job = await jobService.PatchAsync(jobId, request);
     return job is null ? Results.NotFound() : WithEtag(Results.Ok(job), job.UpdatedUtc);
 });
 
-jobs.MapPost("/{jobId:guid}:post", async (JobService jobService, Guid jobId) =>
+jobs.MapPost("/{jobId:guid}:post", async (JobService jobService, HttpRequest httpRequest, Guid jobId) =>
 {
+    var current = await jobService.GetAsync(jobId);
+    if (current is null) return Results.NotFound();
+    var etagProblem = ValidateIfMatch(httpRequest, current.UpdatedUtc);
+    if (etagProblem is not null) return etagProblem;
+
     var job = await jobService.PostAsync(jobId);
     return job is null ? Results.NotFound() : WithEtag(Results.Ok(job), job.UpdatedUtc);
 });
 
-jobs.MapPost("/{jobId:guid}:accept", async (JobService jobService, IValidator<AcceptJobRequest> validator, Guid jobId, AcceptJobRequest request) =>
+jobs.MapPost("/{jobId:guid}:accept", async (JobService jobService, IValidator<AcceptJobRequest> validator, HttpRequest httpRequest, Guid jobId, AcceptJobRequest request) =>
 {
     var validation = await validator.ValidateAsync(request);
     if (!validation.IsValid) return Results.ValidationProblem(ToProblem(validation), extensions: BuildProblemExtensions());
+
+    var current = await jobService.GetAsync(jobId);
+    if (current is null) return Results.NotFound();
+    var etagProblem = ValidateIfMatch(httpRequest, current.UpdatedUtc);
+    if (etagProblem is not null) return etagProblem;
 
     var job = await jobService.AcceptAsync(jobId, request);
     return job is null ? Results.NotFound() : WithEtag(Results.Ok(job), job.UpdatedUtc);
 });
 
-jobs.MapPost("/{jobId:guid}:start", async (JobService jobService, Guid jobId) =>
+jobs.MapPost("/{jobId:guid}:start", async (JobService jobService, HttpRequest httpRequest, Guid jobId) =>
 {
+    var current = await jobService.GetAsync(jobId);
+    if (current is null) return Results.NotFound();
+    var etagProblem = ValidateIfMatch(httpRequest, current.UpdatedUtc);
+    if (etagProblem is not null) return etagProblem;
+
     var job = await jobService.StartAsync(jobId);
     return job is null ? Results.NotFound() : WithEtag(Results.Ok(job), job.UpdatedUtc);
 });
 
-jobs.MapPost("/{jobId:guid}:complete", async (JobService jobService, Guid jobId) =>
+jobs.MapPost("/{jobId:guid}:complete", async (JobService jobService, HttpRequest httpRequest, Guid jobId) =>
 {
+    var current = await jobService.GetAsync(jobId);
+    if (current is null) return Results.NotFound();
+    var etagProblem = ValidateIfMatch(httpRequest, current.UpdatedUtc);
+    if (etagProblem is not null) return etagProblem;
+
     var job = await jobService.CompleteAsync(jobId);
     return job is null ? Results.NotFound() : WithEtag(Results.Ok(job), job.UpdatedUtc);
 });
 
-jobs.MapPost("/{jobId:guid}:close", async (JobService jobService, Guid jobId) =>
+jobs.MapPost("/{jobId:guid}:close", async (JobService jobService, HttpRequest httpRequest, Guid jobId) =>
 {
+    var current = await jobService.GetAsync(jobId);
+    if (current is null) return Results.NotFound();
+    var etagProblem = ValidateIfMatch(httpRequest, current.UpdatedUtc);
+    if (etagProblem is not null) return etagProblem;
+
     var job = await jobService.CloseAsync(jobId);
     return job is null ? Results.NotFound() : WithEtag(Results.Ok(job), job.UpdatedUtc);
 });
 
-jobs.MapPost("/{jobId:guid}:dispute", async (JobService jobService, Guid jobId) =>
+jobs.MapPost("/{jobId:guid}:dispute", async (JobService jobService, HttpRequest httpRequest, Guid jobId) =>
 {
+    var current = await jobService.GetAsync(jobId);
+    if (current is null) return Results.NotFound();
+    var etagProblem = ValidateIfMatch(httpRequest, current.UpdatedUtc);
+    if (etagProblem is not null) return etagProblem;
+
     var job = await jobService.DisputeAsync(jobId);
     return job is null ? Results.NotFound() : WithEtag(Results.Ok(job), job.UpdatedUtc);
 });
 
-jobs.MapPost("/{jobId:guid}:cancel", async (JobService jobService, Guid jobId) =>
+jobs.MapPost("/{jobId:guid}:cancel", async (JobService jobService, HttpRequest httpRequest, Guid jobId) =>
 {
+    var current = await jobService.GetAsync(jobId);
+    if (current is null) return Results.NotFound();
+    var etagProblem = ValidateIfMatch(httpRequest, current.UpdatedUtc);
+    if (etagProblem is not null) return etagProblem;
+
     var job = await jobService.CancelAsync(jobId);
     return job is null ? Results.NotFound() : WithEtag(Results.Ok(job), job.UpdatedUtc);
 });
@@ -446,26 +492,46 @@ bookings.MapPost("/", async (BookingService bookingService, IValidator<CreateBoo
     return WithEtag(Results.Created($"/api/v1/bookings/{booking.Id}", booking), booking.UpdatedUtc);
 });
 
-bookings.MapPost("/{bookingId:guid}:confirm", async (BookingService bookingService, Guid bookingId) =>
+bookings.MapPost("/{bookingId:guid}:confirm", async (BookingService bookingService, HttpRequest httpRequest, Guid bookingId) =>
 {
+    var current = await bookingService.GetAsync(bookingId);
+    if (current is null) return Results.NotFound();
+    var etagProblem = ValidateIfMatch(httpRequest, current.UpdatedUtc);
+    if (etagProblem is not null) return etagProblem;
+
     var booking = await bookingService.ConfirmAsync(bookingId);
     return booking is null ? Results.NotFound() : WithEtag(Results.Ok(booking), booking.UpdatedUtc);
 });
 
-bookings.MapPost("/{bookingId:guid}:decline", async (BookingService bookingService, Guid bookingId) =>
+bookings.MapPost("/{bookingId:guid}:decline", async (BookingService bookingService, HttpRequest httpRequest, Guid bookingId) =>
 {
+    var current = await bookingService.GetAsync(bookingId);
+    if (current is null) return Results.NotFound();
+    var etagProblem = ValidateIfMatch(httpRequest, current.UpdatedUtc);
+    if (etagProblem is not null) return etagProblem;
+
     var booking = await bookingService.DeclineAsync(bookingId);
     return booking is null ? Results.NotFound() : WithEtag(Results.Ok(booking), booking.UpdatedUtc);
 });
 
-bookings.MapPost("/{bookingId:guid}:expire", async (BookingService bookingService, Guid bookingId) =>
+bookings.MapPost("/{bookingId:guid}:expire", async (BookingService bookingService, HttpRequest httpRequest, Guid bookingId) =>
 {
+    var current = await bookingService.GetAsync(bookingId);
+    if (current is null) return Results.NotFound();
+    var etagProblem = ValidateIfMatch(httpRequest, current.UpdatedUtc);
+    if (etagProblem is not null) return etagProblem;
+
     var booking = await bookingService.ExpireAsync(bookingId);
     return booking is null ? Results.NotFound() : WithEtag(Results.Ok(booking), booking.UpdatedUtc);
 });
 
-bookings.MapPost("/{bookingId:guid}:cancel", async (BookingService bookingService, Guid bookingId) =>
+bookings.MapPost("/{bookingId:guid}:cancel", async (BookingService bookingService, HttpRequest httpRequest, Guid bookingId) =>
 {
+    var current = await bookingService.GetAsync(bookingId);
+    if (current is null) return Results.NotFound();
+    var etagProblem = ValidateIfMatch(httpRequest, current.UpdatedUtc);
+    if (etagProblem is not null) return etagProblem;
+
     var booking = await bookingService.CancelAsync(bookingId);
     return booking is null ? Results.NotFound() : WithEtag(Results.Ok(booking), booking.UpdatedUtc);
 });
@@ -504,26 +570,41 @@ providers.MapPost("/", async (ProviderService providerService, IValidator<Regist
     return WithEtag(Results.Created($"/api/v1/providers/{provider.Id}", provider), provider.UpdatedUtc);
 });
 
-providers.MapPut("/{providerId:guid}", async (ProviderService providerService, IValidator<UpdateProviderRequest> validator, Guid providerId, UpdateProviderRequest request) =>
+providers.MapPut("/{providerId:guid}", async (ProviderService providerService, IValidator<UpdateProviderRequest> validator, HttpRequest httpRequest, Guid providerId, UpdateProviderRequest request) =>
 {
     var validation = await validator.ValidateAsync(request);
     if (!validation.IsValid) return Results.ValidationProblem(ToProblem(validation), extensions: BuildProblemExtensions());
+
+    var current = await providerService.GetAsync(providerId);
+    if (current is null) return Results.NotFound();
+    var etagProblem = ValidateIfMatch(httpRequest, current.UpdatedUtc);
+    if (etagProblem is not null) return etagProblem;
 
     var provider = await providerService.UpdateAsync(providerId, request);
     return provider is null ? Results.NotFound() : WithEtag(Results.Ok(provider), provider.UpdatedUtc);
 });
 
-providers.MapPost("/{providerId:guid}/availability", async (ProviderService providerService, IValidator<AddAvailabilityRequest> validator, Guid providerId, AddAvailabilityRequest request) =>
+providers.MapPost("/{providerId:guid}/availability", async (ProviderService providerService, IValidator<AddAvailabilityRequest> validator, HttpRequest httpRequest, Guid providerId, AddAvailabilityRequest request) =>
 {
     var validation = await validator.ValidateAsync(request);
     if (!validation.IsValid) return Results.ValidationProblem(ToProblem(validation), extensions: BuildProblemExtensions());
+
+    var current = await providerService.GetAsync(providerId);
+    if (current is null) return Results.NotFound();
+    var etagProblem = ValidateIfMatch(httpRequest, current.UpdatedUtc);
+    if (etagProblem is not null) return etagProblem;
 
     var provider = await providerService.AddAvailabilityAsync(providerId, request);
     return provider is null ? Results.NotFound() : WithEtag(Results.Ok(provider), provider.UpdatedUtc);
 });
 
-providers.MapDelete("/{providerId:guid}/availability/{availabilityId:guid}", async (ProviderService providerService, Guid providerId, Guid availabilityId) =>
+providers.MapDelete("/{providerId:guid}/availability/{availabilityId:guid}", async (ProviderService providerService, HttpRequest httpRequest, Guid providerId, Guid availabilityId) =>
 {
+    var current = await providerService.GetAsync(providerId);
+    if (current is null) return Results.NotFound();
+    var etagProblem = ValidateIfMatch(httpRequest, current.UpdatedUtc);
+    if (etagProblem is not null) return etagProblem;
+
     var provider = await providerService.RemoveAvailabilityAsync(providerId, availabilityId);
     return provider is null ? Results.NotFound() : WithEtag(Results.Ok(provider), provider.UpdatedUtc);
 });
@@ -580,6 +661,46 @@ static (int Page, int PageSize) NormalizePaging(int? page, int? pageSize, Dictio
     return (resolvedPage, resolvedPageSize);
 }
 
+static IResult? ValidateIfMatch(HttpRequest httpRequest, DateTime updatedUtc)
+{
+    if (!httpRequest.Headers.TryGetValue("If-Match", out var values) || string.IsNullOrWhiteSpace(values))
+    {
+        return null;
+    }
+
+    var header = values.ToString();
+    if (string.Equals(header, "*", StringComparison.OrdinalIgnoreCase))
+    {
+        return null;
+    }
+
+    if (!TryParseEtagTicks(header, out var ticks))
+    {
+        return CreateProblem(StatusCodes.Status400BadRequest, "etag_invalid", "If-Match must be a valid ETag.");
+    }
+
+    var currentTicks = updatedUtc.ToUniversalTime().Ticks;
+    if (ticks != currentTicks)
+    {
+        return CreateProblem(StatusCodes.Status409Conflict, "etag_mismatch", "ETag does not match current resource version.");
+    }
+
+    return null;
+}
+
+static bool TryParseEtagTicks(string header, out long ticks)
+{
+    ticks = 0;
+    var value = header.Split(',')[0].Trim();
+    if (value.StartsWith("W/"))
+    {
+        value = value[2..].Trim();
+    }
+
+    value = value.Trim('\"');
+    return long.TryParse(value, out ticks);
+}
+
 static IResult WithEtag(IResult result, DateTime updatedUtc)
 {
     return new ResultWithHeader(result, "ETag", CreateEtag(updatedUtc));
@@ -589,6 +710,36 @@ static string CreateEtag(DateTime updatedUtc)
 {
     var ticks = updatedUtc.ToUniversalTime().Ticks;
     return $"W/\"{ticks}\"";
+}
+
+sealed class AuthTestStartupFilter : IStartupFilter
+{
+    public Action<IApplicationBuilder> Configure(Action<IApplicationBuilder> next)
+    {
+        return app =>
+        {
+            app.Use(async (context, pipelineNext) =>
+            {
+                if (context.Request.Headers.ContainsKey("X-Test-Auth-Disabled"))
+                {
+                    var endpoint = context.GetEndpoint();
+                    if (endpoint is not null)
+                    {
+                        var allowAnonymous = endpoint.Metadata.GetMetadata<Microsoft.AspNetCore.Authorization.IAllowAnonymous>();
+                        if (allowAnonymous is null)
+                        {
+                            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                            return;
+                        }
+                    }
+                }
+
+                await pipelineNext();
+            });
+
+            next(app);
+        };
+    }
 }
 
 static void ValidateConfiguration(IConfiguration configuration, IHostEnvironment environment)

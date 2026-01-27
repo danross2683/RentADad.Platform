@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Data.Common;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -17,6 +18,16 @@ public sealed class TestApplicationFactory : WebApplicationFactory<Program>
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");
+        builder.ConfigureAppConfiguration((context, config) =>
+        {
+            config.AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Auth:Enabled"] = "true",
+                ["Auth:Issuer"] = "test",
+                ["Auth:Audience"] = "test",
+                ["Auth:SigningKey"] = "test-signing-key"
+            });
+        });
 
         builder.ConfigureServices(services =>
         {

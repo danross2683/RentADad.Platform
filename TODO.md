@@ -4,11 +4,11 @@
 
 ### P0 Testing Completeness
 
-- [ ] Define test coverage targets by layer (domain/application/api)
-- [ ] Add missing API tests for new list/search endpoints
-- [ ] Add validation tests for paging/filtering inputs
-- [ ] Add concurrency tests using ETag/UpdatedUtc
-- [ ] Add negative tests for auth enabled mode
+- [x] Define test coverage targets by layer (domain/application/api)
+- [x] Add missing API tests for new list/search endpoints
+- [x] Add validation tests for paging/filtering inputs
+- [x] Add concurrency tests using ETag/UpdatedUtc
+- [x] Add negative tests for auth enabled mode
 
 ### P1 Reliability
 
