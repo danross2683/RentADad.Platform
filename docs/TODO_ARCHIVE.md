@@ -66,3 +66,39 @@
 - [x] Add ProblemDetails error mapping for domain violations
 - [x] Add integration tests for Jobs/Bookings API
 - [x] Add initial seed data for local dev
+
+## Archive 2026-01-27 (MVP Hardening)
+
+### P0 Production Readiness
+
+- [x] Add Dockerfile + docker compose for API (local + CI)
+- [x] Add health checks (liveness/readiness) + basic probes
+- [x] Add database migration workflow (startup apply or manual script)
+- [x] Add configuration validation on startup (required settings)
+- [x] Define versioning policy for API (SemVer, compatibility rules, deprecation window)
+
+### P0 API Guardrails
+
+- [x] Add request/response contracts doc (swagger + examples)
+- [x] Add rate limiting / throttling defaults
+- [x] Add auth placeholder (API key or JWT stub)
+- [x] Add standardized ProblemDetails response shape (errorCode, traceId, version)
+- [x] Introduce API versioning strategy (route or header) + default version
+
+### P1 Data & Persistence
+
+- [x] Add concurrency handling strategy for updates (rowversion or retry)
+- [x] Add indexes for availability window search
+- [x] Add pagination + filtering for list endpoints
+
+### P1 Observability
+
+- [x] Add OpenTelemetry tracing + basic metrics
+- [x] Add structured request logging with latency
+- [x] Add error logging with correlation id
+
+### P2 Developer Experience
+
+- [x] Add local dev bootstrap script
+- [x] Add make/just tasks (build/test/format)
+- [x] Add seed data CLI for demo scenarios
