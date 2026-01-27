@@ -122,7 +122,8 @@ stateDiagram-v2
   Closed --> [*]
 ```
 
-**Notes**
+## Notes
+
 - `Expired` represents time-based transitions (e.g., acceptance window elapsed).
 - `Disputed` captures exception handling paths rather than the happy flow.
 
@@ -194,5 +195,3 @@ The focus is on **design clarity, domain correctness, and defensible decisions**
 - Separation between orchestration and execution
 
 - The ability to evolve a system intentionally
-
-
