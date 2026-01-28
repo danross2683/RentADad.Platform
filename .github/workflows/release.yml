@@ -45,8 +45,8 @@ jobs:
       - name: Start API
         run: |
           env ASPNETCORE_ENVIRONMENT=Testing \
-          ConnectionStrings__Test="Data Source=InMemory;Mode=Memory;Cache=Shared" \
-          Database__AllowTestMigrations="true" \
+          RentADad_ConnectionStrings__Test="Data Source=InMemory;Mode=Memory;Cache=Shared" \
+          RentADad_Database__AllowTestMigrations="true" \
           nohup dotnet run --no-launch-profile --project ./src/RentADad.Api/RentADad.Api.csproj --urls http://127.0.0.1:8080 > api.log 2>&1 &
           echo $! > api.pid
           for i in $(seq 1 30); do
