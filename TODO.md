@@ -24,6 +24,6 @@
 
 ### P2 Security
 
-- [ ] Add security headers middleware
-- [ ] Add secrets management guidance
-- [ ] Add vulnerability scanning in CI
+- [x] Add security headers middleware
+- [x] Add secrets management guidance
+- [x] Add vulnerability scanning in CI

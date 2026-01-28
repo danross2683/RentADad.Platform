@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore -c Release
+
+      - name: Test
+        run: dotnet test .\src\RentADad.Tests\RentADad.Tests.csproj -c Release --no-build -v:n
+
+      - name: Vulnerability scan
+        shell: pwsh
+        run: |
+          $output = "vuln-report.json"
+          dotnet list package --vulnerable --include-transitive --format json | Out-File -FilePath $output -Encoding utf8
+          $json = Get-Content $output -Raw | ConvertFrom-Json
+          $vulnerable = @()
+          foreach ($project in $json.projects) {
+            foreach ($framework in $project.frameworks) {
+              foreach ($pkg in @($framework.topLevelPackages + $framework.transitivePackages)) {
+                if ($null -ne $pkg.vulnerabilities -and $pkg.vulnerabilities.Count -gt 0) {
+                  $vulnerable += $pkg
+                }
+              }
+            }
+          }
+          if ($vulnerable.Count -gt 0) {
+            Write-Error "Vulnerabilities detected. See $output for details."
+          } else {
+            Write-Host "No vulnerable packages detected."
+          }

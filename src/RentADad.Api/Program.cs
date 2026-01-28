@@ -186,6 +186,10 @@ if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 }
+else
+{
+    app.UseHsts();
+}
 
 if (authEnabled)
 {
@@ -197,6 +201,7 @@ app.UseMiddleware<ApiKeyAuthMiddleware>();
 
 app.UseRateLimiter();
 app.UseHttpsRedirection();
+app.UseMiddleware<SecurityHeadersMiddleware>();
 app.UseMiddleware<IdempotencyMiddleware>();
 
 app.Use(async (context, next) =>
