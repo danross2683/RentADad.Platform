@@ -24,5 +24,5 @@
 
 ### P2 DX
 
-- [ ] Add docker-compose override for local debugging
-- [ ] Add sample .env for local configuration
+- [x] Add docker-compose override for local debugging
+- [x] Add sample .env for local configuration

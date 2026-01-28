@@ -1,0 +1,7 @@
+services:
+  api:
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      RentADad_Auth__Enabled: "false"
+    ports:
+      - "5080:8080"

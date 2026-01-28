@@ -17,6 +17,7 @@ Set these before running the API:
   - `RentADad_Auth__Issuer=rentadad.local`
   - `RentADad_Auth__Audience=rentadad.local`
   - `RentADad_Auth__SigningKey=dev-only-change-me`
+- Or copy `.env.example` to `.env` and load it via your shell.
 
 ## Ports
 
