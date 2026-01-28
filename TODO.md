@@ -1,28 +1,29 @@
 # RentADad.Platform TODO
 
-## Milestone: Quality & Readiness
+## Milestone: Productization & Platform
 
-### P0 Testing Completeness
+### P0 Productization
 
-- [x] Define test coverage targets by layer (domain/application/api)
-- [x] Add missing API tests for new list/search endpoints
-- [x] Add validation tests for paging/filtering inputs
-- [x] Add concurrency tests using ETag/UpdatedUtc
-- [x] Add negative tests for auth enabled mode
+- [ ] Implement auth flows (JWT validation + roles/claims)
+- [ ] Add API key alternative for service-to-service use
+- [ ] Implement idempotency key storage (backed by DB)
+- [ ] Add outbound notification stub (email/sms webhook)
 
-### P1 Reliability
+### P1 Operations
 
-- [x] Add retry policy for transient DB failures
-- [x] Add idempotency guidance for write actions
-- [x] Add background job to expire stale bookings (if needed)
+- [ ] Add structured audit logs for state transitions
+- [ ] Add admin endpoints for job/booking oversight
+- [ ] Add backup/restore runbook
+- [ ] Add deployment checklist and rollback plan
 
-### P1 Docs
+### P1 Performance
 
-- [x] Update API_CONTRACTS with paging parameters and examples (verify)
-- [x] Document ETag usage and concurrency behavior
-- [x] Document health checks and metrics endpoints
+- [ ] Add caching strategy for provider availability searches
+- [ ] Add read models for job listings
+- [ ] Add bulk operations for provider availability
 
-### P2 DX
+### P2 Security
 
-- [x] Add docker-compose override for local debugging
-- [x] Add sample .env for local configuration
+- [ ] Add security headers middleware
+- [ ] Add secrets management guidance
+- [ ] Add vulnerability scanning in CI
