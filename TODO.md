@@ -1,29 +1,24 @@
 # RentADad.Platform TODO
 
-## Milestone: Go-Live & Hardening
+## Milestone: Release Enablement
 
-### P0 Go-Live
+### P0 Release
 
-- [x] Define production environment variables checklist
 - [ ] Add GitHub Actions release workflow (build, test, artefact)
-- [x] Add database migration job to CI/CD pipeline
-- [x] Add production readiness checklist (health, backups, on-call)
-- [x] Add smoke test script for API endpoints
+- [ ] Add environment-specific deployment checklist (staging vs prod)
+- [ ] Add release notes template (what changed, risks, rollback)
+- [ ] Add production migration dry‑run guidance
+- [ ] Add release approval checklist (sign‑off, comms, support)
 
-### P1 Operability
+### P1 Platform
 
-- [x] Add alerting thresholds (latency, error rate, saturation)
-- [x] Add dashboards for API, DB, and background jobs
-- [x] Add structured request/response logging redaction rules
-- [x] Add incident response runbook
+- [ ] Add API usage limits documentation for consumers
+- [ ] Add deprecation policy link in API guide
+- [ ] Add request tracing guide for clients
+- [ ] Add data retention policy note
 
-### P2 Security & Compliance
+### P2 Reliability
 
-- [x] Add dependency licence report in CI
-- [x] Add secrets rotation guidance
-- [x] Add threat model notes (entry points, trust boundaries)
-
-### P2 Product
-
-- [ ] Add user-facing documentation for API consumers
-- [ ] Add status page or uptime link (if applicable)
+- [ ] Add load test script (basic concurrency baseline)
+- [ ] Add chaos test checklist (DB down, webhook failures)
+- [ ] Add backup restore drill schedule
