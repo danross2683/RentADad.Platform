@@ -291,7 +291,14 @@ if (autoMigrate && (!app.Environment.IsEnvironment("Testing") || allowTestMigrat
 {
     using var scope = app.Services.CreateScope();
     var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    await dbContext.Database.MigrateAsync();
+    if (app.Environment.IsEnvironment("Testing") && allowTestMigrations && !migrationsOnly)
+    {
+        await dbContext.Database.EnsureCreatedAsync();
+    }
+    else
+    {
+        await dbContext.Database.MigrateAsync();
+    }
 }
 
 if (migrationsOnly)
