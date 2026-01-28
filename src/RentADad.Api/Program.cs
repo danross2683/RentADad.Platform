@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
@@ -57,22 +58,33 @@ builder.Configuration.AddEnvironmentVariables(prefix: "RentADad_");
 ValidateConfiguration(builder.Configuration, builder.Environment);
 
 builder.Services.AddOpenApi();
-builder.Services.AddDbContext<AppDbContext>(options =>
+var allowTestMigrations = builder.Configuration.GetValue("Database:AllowTestMigrations", false);
+var testConnectionString = builder.Configuration.GetConnectionString("Test");
+var useSqliteForTests = builder.Environment.IsEnvironment("Testing") && !string.IsNullOrWhiteSpace(testConnectionString);
+
+if (useSqliteForTests)
+{
+    builder.Services.AddSingleton(_ =>
+    {
+        var connection = new SqliteConnection("Data Source=InMemory;Mode=Memory;Cache=Shared");
+        connection.Open();
+        return connection;
+    });
+}
+
+builder.Services.AddDbContext<AppDbContext>((sp, options) =>
 {
     var connectionString = builder.Configuration.GetConnectionString("Default");
-    var testConnection = builder.Configuration.GetConnectionString("Test");
-    var useSqlite = builder.Environment.IsEnvironment("Testing") && !string.IsNullOrWhiteSpace(testConnection);
-    var allowTestMigrations = builder.Configuration.GetValue("Database:AllowTestMigrations", false);
-
     if (allowTestMigrations)
     {
         options.ConfigureWarnings(warnings =>
             warnings.Ignore(RelationalEventId.PendingModelChangesWarning));
     }
 
-    if (useSqlite)
+    if (useSqliteForTests)
     {
-        options.UseSqlite(testConnection);
+        var connection = sp.GetRequiredService<SqliteConnection>();
+        options.UseSqlite(connection);
         return;
     }
 
@@ -274,7 +286,6 @@ app.MapHealthChecks("/health/ready", new HealthCheckOptions
 
 var autoMigrate = app.Configuration.GetValue("Database:AutoMigrate", true);
 var migrationsOnly = args.Contains("--apply-migrations-only");
-var allowTestMigrations = app.Configuration.GetValue("Database:AllowTestMigrations", false);
 var seedDemo = args.Contains("--seed-demo");
 if (autoMigrate && (!app.Environment.IsEnvironment("Testing") || allowTestMigrations || migrationsOnly))
 {
