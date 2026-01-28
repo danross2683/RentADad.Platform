@@ -44,6 +44,8 @@ jobs:
 
       - name: Start API
         run: |
+          ASPNETCORE_ENVIRONMENT=Testing \
+          ConnectionStrings__Test="DataSource=:memory:" \
           nohup dotnet run --project ./src/RentADad.Api/RentADad.Api.csproj --urls http://127.0.0.1:8080 > api.log 2>&1 &
           echo $! > api.pid
           for i in $(seq 1 30); do
