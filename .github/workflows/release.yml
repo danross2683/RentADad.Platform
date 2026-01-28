@@ -65,6 +65,11 @@ jobs:
           ./scripts/smoke-test.sh
         env:
           BASE_URL: http://127.0.0.1:8080
+      - name: Dump API log on failure
+        if: failure()
+        run: |
+          echo "---- api.log ----"
+          cat api.log || true
 
       - name: Stop API
         if: always()
