@@ -4,11 +4,11 @@
 
 ### P0 Release
 
-- [ ] Add GitHub Actions release workflow (build, test, artefact)
-- [ ] Add environment-specific deployment checklist (staging vs prod)
-- [ ] Add release notes template (what changed, risks, rollback)
-- [ ] Add production migration dry‑run guidance
-- [ ] Add release approval checklist (sign‑off, comms, support)
+- [x] Add GitHub Actions release workflow (build, test, artefact)
+- [x] Add environment-specific deployment checklist (staging vs prod)
+- [x] Add release notes template (what changed, risks, rollback)
+- [x] Add production migration dry‑run guidance
+- [x] Add release approval checklist (sign‑off, comms, support)
 
 ### P1 Platform
 
