@@ -190,7 +190,6 @@ if (authEnabled)
     });
 }
 
-builder.Services.AddSingleton<ApiKeyAuthMiddleware>();
 
 var app = builder.Build();
 var appStartedUtc = DateTime.UtcNow;
