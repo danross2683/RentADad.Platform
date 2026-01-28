@@ -266,8 +266,9 @@ app.MapHealthChecks("/health/ready", new HealthCheckOptions
 
 var autoMigrate = app.Configuration.GetValue("Database:AutoMigrate", true);
 var migrationsOnly = args.Contains("--apply-migrations-only");
+var allowTestMigrations = app.Configuration.GetValue("Database:AllowTestMigrations", false);
 var seedDemo = args.Contains("--seed-demo");
-if (autoMigrate && !app.Environment.IsEnvironment("Testing"))
+if (autoMigrate && (!app.Environment.IsEnvironment("Testing") || allowTestMigrations || migrationsOnly))
 {
     using var scope = app.Services.CreateScope();
     var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
