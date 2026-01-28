@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
 using OpenTelemetry.Metrics;
@@ -65,6 +66,11 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     if (useSqlite)
     {
         options.UseSqlite(testConnection);
+        if (builder.Configuration.GetValue("Database:AllowTestMigrations", false))
+        {
+            options.ConfigureWarnings(warnings =>
+                warnings.Ignore(RelationalEventId.PendingModelChangesWarning));
+        }
         return;
     }
 
