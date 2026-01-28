@@ -1,5 +1,4 @@
 {
-  "extends": ["@commitlint/config-conventional"],
   "plugins": ["./.commitlint-imperative.cjs"],
   "rules": {
     "type-enum": [
