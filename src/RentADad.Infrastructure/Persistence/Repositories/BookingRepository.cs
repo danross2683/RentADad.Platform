@@ -60,6 +60,18 @@ public sealed class BookingRepository : IBookingRepository
         return new PagedResult<Booking>(items, query.Page, query.PageSize, total);
     }
 
+    public async Task<List<Guid>> ListExpiredPendingAsync(DateTime utcNow, int batchSize, CancellationToken cancellationToken = default)
+    {
+        return await _dbContext.Bookings
+            .AsNoTracking()
+            .Where(booking => booking.Status == BookingStatus.Pending && booking.EndUtc <= utcNow)
+            .OrderBy(booking => booking.EndUtc)
+            .ThenBy(booking => booking.Id)
+            .Select(booking => booking.Id)
+            .Take(batchSize)
+            .ToListAsync(cancellationToken);
+    }
+
     public Task<Booking?> GetByIdAsync(Guid bookingId, CancellationToken cancellationToken = default)
     {
         return _dbContext.Bookings

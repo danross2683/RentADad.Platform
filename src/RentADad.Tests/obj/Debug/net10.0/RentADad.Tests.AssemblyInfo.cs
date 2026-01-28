@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("RentADad.Tests")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+d1007f4c89c7dc94ff610e5fae7bc3cd337700ed")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+2c2bb3f02ff418207ab3a277eb01c8bad72d7c15")]
 [assembly: System.Reflection.AssemblyProductAttribute("RentADad.Tests")]
 [assembly: System.Reflection.AssemblyTitleAttribute("RentADad.Tests")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

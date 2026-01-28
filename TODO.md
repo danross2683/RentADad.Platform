@@ -12,15 +12,15 @@
 
 ### P1 Reliability
 
-- [ ] Add retry policy for transient DB failures
-- [ ] Add idempotency guidance for write actions
-- [ ] Add background job to expire stale bookings (if needed)
+- [x] Add retry policy for transient DB failures
+- [x] Add idempotency guidance for write actions
+- [x] Add background job to expire stale bookings (if needed)
 
 ### P1 Docs
 
-- [ ] Update API_CONTRACTS with paging parameters and examples (verify)
-- [ ] Document ETag usage and concurrency behavior
-- [ ] Document health checks and metrics endpoints
+- [x] Update API_CONTRACTS with paging parameters and examples (verify)
+- [x] Document ETag usage and concurrency behavior
+- [x] Document health checks and metrics endpoints
 
 ### P2 DX
 

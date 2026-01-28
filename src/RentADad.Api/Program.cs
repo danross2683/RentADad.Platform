@@ -14,6 +14,7 @@ using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using RentADad.Api;
+using RentADad.Api.Background;
 using RentADad.Api.Health;
 using RentADad.Api.Results;
 using RentADad.Application.Abstractions.Persistence;
@@ -54,7 +55,14 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
     options.UseNpgsql(
         connectionString,
-        npgsql => npgsql.MigrationsAssembly(typeof(AppDbContext).Assembly.GetName().Name));
+        npgsql =>
+        {
+            npgsql.MigrationsAssembly(typeof(AppDbContext).Assembly.GetName().Name);
+            npgsql.EnableRetryOnFailure(
+                maxRetryCount: 3,
+                maxRetryDelay: TimeSpan.FromSeconds(2),
+                errorCodesToAdd: null);
+        });
 });
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<IJobRepository, JobRepository>();
@@ -69,6 +77,7 @@ builder.Services.AddScoped<DevSeeder>();
 builder.Services.AddHealthChecks()
     .AddCheck("self", () => HealthCheckResult.Healthy(), tags: new[] { "live" })
     .AddCheck<DbReadyHealthCheck>("db", tags: new[] { "ready" });
+builder.Services.AddHostedService<BookingExpiryService>();
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;

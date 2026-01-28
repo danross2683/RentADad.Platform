@@ -27,3 +27,19 @@ See `docs/API_CONTRACTS.md` for request/response examples.
 
 - Use RFC 7807 ProblemDetails.
 - Include a stable `errorCode` extension for domain errors.
+
+## Health & metrics
+
+- Liveness: `GET /health/live`
+- Readiness: `GET /health/ready` (checks database connectivity)
+- Metrics: `GET /metrics` (Prometheus scrape)
+
+## Idempotency
+
+Write actions should be idempotent where possible. Clients are expected to:
+
+- provide an `Idempotency-Key` header for create actions,
+- retry safely on timeouts or transient failures,
+- and avoid replaying different payloads with the same key.
+
+The server may reject conflicting replays with a 409 when idempotency is enforced.

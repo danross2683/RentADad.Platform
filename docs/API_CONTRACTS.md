@@ -9,6 +9,7 @@ For OpenAPI, run the API in Development and use the OpenAPI document exposed by 
 - Content type: `application/json`
 - Dates: ISO-8601 UTC (`2026-01-27T12:00:00Z`)
 - Responses include `ETag` for resource representations.
+- Paging: `page` (>=1, default 1) and `pageSize` (1-200, default 50) on `/search` endpoints.
 
 ## Jobs
 
@@ -339,4 +340,24 @@ Example:
   "traceId": "0af7651916cd43dd8448eb211c80319c",
   "version": "v1"
 }
+```
+
+## Concurrency (ETag)
+
+Mutating endpoints return an `ETag` header that represents the current version of the resource.
+
+Clients should:
+
+- store the latest `ETag` value,
+- send it back in `If-Match` for updates or state transitions,
+- expect `409` if the resource has changed in the meantime.
+
+Example:
+```text
+ETag: W/"638419921234567890"
+```
+
+```http
+PUT /api/v1/providers/{providerId}
+If-Match: W/"638419921234567890"
 ```
