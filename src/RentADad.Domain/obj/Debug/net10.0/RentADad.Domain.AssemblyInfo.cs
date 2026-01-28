@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("RentADad.Domain")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+d85bd96c269284732d2a60b77d519e7bdd9ec1ab")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+2bbb24c83d0c4f3c9105880bfab6b1527726d6a1")]
 [assembly: System.Reflection.AssemblyProductAttribute("RentADad.Domain")]
 [assembly: System.Reflection.AssemblyTitleAttribute("RentADad.Domain")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

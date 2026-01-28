@@ -19,6 +19,7 @@ using OpenTelemetry.Trace;
 using RentADad.Api;
 using RentADad.Api.Auth;
 using RentADad.Api.Background;
+using RentADad.Api.Dashboards;
 using RentADad.Api.Health;
 using RentADad.Api.Middleware;
 using RentADad.Api.Notifications;
@@ -31,6 +32,7 @@ using RentADad.Application.Abstractions.Notifications;
 using RentADad.Application.Abstractions.Auditing;
 using RentADad.Application.Abstractions.ReadModels;
 using RentADad.Application.Abstractions.Caching;
+using RentADad.Application.Abstractions.Observability;
 using RentADad.Application.Bookings;
 using RentADad.Application.Bookings.Requests;
 using RentADad.Application.Bookings.Validators;
@@ -99,6 +101,16 @@ var cacheSettings = new CacheSettings
 };
 builder.Services.AddSingleton(cacheSettings);
 builder.Services.AddSingleton<ICacheStore, MemoryCacheStore>();
+var alertingThresholds = new AlertingThresholds
+{
+    ErrorRate5xxPercent = builder.Configuration.GetValue("Alerting:ErrorRate5xxPercent", 1.0),
+    LatencyP95Ms = builder.Configuration.GetValue("Alerting:LatencyP95Ms", 1500),
+    LatencyP99Ms = builder.Configuration.GetValue("Alerting:LatencyP99Ms", 3000),
+    AuthFailurePercent = builder.Configuration.GetValue("Alerting:AuthFailurePercent", 5.0),
+    DbP95Ms = builder.Configuration.GetValue("Alerting:DbP95Ms", 500),
+    BackgroundJobStaleMinutes = builder.Configuration.GetValue("Alerting:BackgroundJobStaleMinutes", 10)
+};
+builder.Services.AddSingleton(alertingThresholds);
 builder.Services.AddHealthChecks()
     .AddCheck("self", () => HealthCheckResult.Healthy(), tags: new[] { "live" })
     .AddCheck<DbReadyHealthCheck>("db", tags: new[] { "ready" });
@@ -181,6 +193,7 @@ if (authEnabled)
 builder.Services.AddSingleton<ApiKeyAuthMiddleware>();
 
 var app = builder.Build();
+var appStartedUtc = DateTime.UtcNow;
 
 if (app.Environment.IsDevelopment())
 {
@@ -224,6 +237,8 @@ app.Use(async (context, next) =>
     }
     finally
     {
+        var requestHeaders = BuildRedactedRequestHeaders(context.Request);
+        var responseHeaders = BuildRedactedResponseHeaders(context.Response);
         var elapsedMs = Stopwatch.GetElapsedTime(started).TotalMilliseconds;
         logger.LogInformation(
             "HTTP {Method} {Path} responded {StatusCode} in {ElapsedMs}ms CorrelationId={CorrelationId}",
@@ -231,6 +246,11 @@ app.Use(async (context, next) =>
             context.Request.Path,
             context.Response.StatusCode,
             elapsedMs,
+            context.TraceIdentifier);
+        logger.LogDebug(
+            "Headers Request={RequestHeaders} Response={ResponseHeaders} CorrelationId={CorrelationId}",
+            requestHeaders,
+            responseHeaders,
             context.TraceIdentifier);
     }
 });
@@ -391,6 +411,41 @@ ApplyWriteAuth(admin.MapGet("/jobs/search", async (
     var query = new JobListQuery(resolvedPage, resolvedPageSize, customerId, parsedStatus);
     var results = await jobService.ListAsync(query);
     return Results.Ok(results);
+}), authEnabled);
+
+ApplyWriteAuth(admin.MapGet("/dashboard/summary", async (
+    AppJobService jobService,
+    BookingService bookingService,
+    ProviderService providerService,
+    AlertingThresholds alerting) =>
+{
+    var jobsByStatus = new Dictionary<string, int>();
+    foreach (var status in Enum.GetValues<DomainJobs.JobStatus>())
+    {
+        var result = await jobService.ListAsync(new JobListQuery(1, 1, null, status));
+        jobsByStatus[status.ToString()] = result.TotalCount;
+    }
+
+    var bookingsByStatus = new Dictionary<string, int>();
+    foreach (var status in Enum.GetValues<RentADad.Domain.Bookings.BookingStatus>())
+    {
+        var result = await bookingService.ListAsync(new BookingListQuery(1, 1, null, null, status, null, null));
+        bookingsByStatus[status.ToString()] = result.TotalCount;
+    }
+
+    var providers = await providerService.ListAsync(new ProviderListQuery(1, 1, null));
+
+    var now = DateTime.UtcNow;
+    var response = new DashboardSummaryResponse(
+        ApiVersion.Current,
+        now,
+        (long)(now - appStartedUtc).TotalSeconds,
+        jobsByStatus,
+        bookingsByStatus,
+        providers.TotalCount,
+        alerting);
+
+    return Results.Ok(response);
 }), authEnabled);
 
 ApplyWriteAuth(admin.MapGet("/bookings/search", async (
@@ -820,6 +875,51 @@ static Dictionary<string, object?> BuildProblemExtensions(string? errorCode = nu
     }
 
     return extensions;
+}
+
+static Dictionary<string, string> BuildRedactedRequestHeaders(HttpRequest request)
+{
+    var allowList = new[]
+    {
+        "User-Agent",
+        "Content-Type",
+        "Accept",
+        "X-Correlation-Id"
+    };
+
+    var sensitive = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    {
+        "Authorization",
+        "X-API-Key",
+        "Cookie"
+    };
+
+    var headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+    foreach (var key in allowList)
+    {
+        if (!request.Headers.TryGetValue(key, out var value)) continue;
+        headers[key] = sensitive.Contains(key) ? "***" : value.ToString();
+    }
+
+    return headers;
+}
+
+static Dictionary<string, string> BuildRedactedResponseHeaders(HttpResponse response)
+{
+    var allowList = new[]
+    {
+        "Content-Type",
+        "Content-Length"
+    };
+
+    var headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+    foreach (var key in allowList)
+    {
+        if (!response.Headers.TryGetValue(key, out var value)) continue;
+        headers[key] = value.ToString();
+    }
+
+    return headers;
 }
 
 static (int Page, int PageSize) NormalizePaging(int? page, int? pageSize, Dictionary<string, string[]> errors)

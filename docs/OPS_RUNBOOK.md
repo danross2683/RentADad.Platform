@@ -20,6 +20,10 @@ pg_restore -h <host> -p 5432 -U <user> -d rentadad -c rentadad.backup
 - Verify restore regularly in a non-production environment.
 - Coordinate restores with application downtime where required.
 
+## Alerting thresholds
+
+See `docs/ALERTING_THRESHOLDS.md` for default thresholds and tuning guidance.
+
 ## Deployment checklist
 
 - Validate configuration for target environment.

@@ -5,17 +5,17 @@
 ### P0 Go-Live
 
 - [x] Define production environment variables checklist
-- [x] Add GitHub Actions release workflow (build, test, artefact)
+- [ ] Add GitHub Actions release workflow (build, test, artefact)
 - [x] Add database migration job to CI/CD pipeline
 - [x] Add production readiness checklist (health, backups, on-call)
 - [x] Add smoke test script for API endpoints
 
 ### P1 Operability
 
-- [ ] Add alerting thresholds (latency, error rate, saturation)
-- [ ] Add dashboards for API, DB, and background jobs
-- [ ] Add structured request/response logging redaction rules
-- [ ] Add incident response runbook
+- [x] Add alerting thresholds (latency, error rate, saturation)
+- [x] Add dashboards for API, DB, and background jobs
+- [x] Add structured request/response logging redaction rules
+- [x] Add incident response runbook
 
 ### P2 Security & Compliance
 
