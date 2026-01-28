@@ -60,7 +60,9 @@ jobs:
           exit 1
 
       - name: Smoke test
-        run: ./scripts/smoke-test.sh
+        run: |
+          chmod +x ./scripts/smoke-test.sh
+          ./scripts/smoke-test.sh
         env:
           BASE_URL: http://127.0.0.1:8080
 
