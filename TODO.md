@@ -19,9 +19,9 @@
 
 ### P2 Security & Compliance
 
-- [ ] Add dependency licence report in CI
-- [ ] Add secrets rotation guidance
-- [ ] Add threat model notes (entry points, trust boundaries)
+- [x] Add dependency licence report in CI
+- [x] Add secrets rotation guidance
+- [x] Add threat model notes (entry points, trust boundaries)
 
 ### P2 Product
 

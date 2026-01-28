@@ -26,6 +26,17 @@ jobs:
       - name: Test
         run: dotnet test ./src/RentADad.Tests/RentADad.Tests.csproj -c Release --no-build -v:n
 
+      - name: License report
+        run: |
+          dotnet tool install --tool-path ./.tools dotnet-project-licenses
+          ./.tools/dotnet-project-licenses -i ./RentADad.Platform.sln -o license-report.json -f json
+
+      - name: Upload license report
+        uses: actions/upload-artifact@v4
+        with:
+          name: license-report
+          path: license-report.json
+
       - name: Vulnerability scan
         shell: pwsh
         run: |
