@@ -4,11 +4,11 @@
 
 ### P0 Go-Live
 
-- [ ] Define production environment variables checklist
-- [ ] Add GitHub Actions release workflow (build, test, artefact)
-- [ ] Add database migration job to CI/CD pipeline
-- [ ] Add production readiness checklist (health, backups, on-call)
-- [ ] Add smoke test script for API endpoints
+- [x] Define production environment variables checklist
+- [x] Add GitHub Actions release workflow (build, test, artefact)
+- [x] Add database migration job to CI/CD pipeline
+- [x] Add production readiness checklist (health, backups, on-call)
+- [x] Add smoke test script for API endpoints
 
 ### P1 Operability
 
