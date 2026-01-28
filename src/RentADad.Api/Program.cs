@@ -62,15 +62,17 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     var connectionString = builder.Configuration.GetConnectionString("Default");
     var testConnection = builder.Configuration.GetConnectionString("Test");
     var useSqlite = builder.Environment.IsEnvironment("Testing") && !string.IsNullOrWhiteSpace(testConnection);
+    var allowTestMigrations = builder.Configuration.GetValue("Database:AllowTestMigrations", false);
+
+    if (allowTestMigrations)
+    {
+        options.ConfigureWarnings(warnings =>
+            warnings.Ignore(RelationalEventId.PendingModelChangesWarning));
+    }
 
     if (useSqlite)
     {
         options.UseSqlite(testConnection);
-        if (builder.Configuration.GetValue("Database:AllowTestMigrations", false))
-        {
-            options.ConfigureWarnings(warnings =>
-                warnings.Ignore(RelationalEventId.PendingModelChangesWarning));
-        }
         return;
     }
 
