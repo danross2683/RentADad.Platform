@@ -8,8 +8,10 @@ using RentADad.Application.Abstractions.Persistence;
 using RentADad.Application.Abstractions.Repositories;
 using RentADad.Application.Abstractions.Notifications;
 using RentADad.Application.Abstractions.Auditing;
+using RentADad.Application.Abstractions.ReadModels;
 using RentADad.Application.Common.Paging;
 using RentADad.Application.Jobs.Requests;
+using RentADad.Application.Jobs.ReadModels;
 using RentADad.Application.Jobs.Responses;
 using RentADad.Domain.Common;
 using RentADad.Domain.Jobs;
@@ -22,14 +24,25 @@ public sealed class JobService
     private readonly IUnitOfWork _unitOfWork;
     private readonly INotificationSender _notifications;
     private readonly IAuditSink _auditSink;
+    private readonly IJobListingReader _jobListings;
+    private readonly IJobListingWriter _jobListingWriter;
     private readonly ILogger<JobService> _logger;
 
-    public JobService(IJobRepository jobs, IUnitOfWork unitOfWork, INotificationSender notifications, IAuditSink auditSink, ILogger<JobService> logger)
+    public JobService(
+        IJobRepository jobs,
+        IUnitOfWork unitOfWork,
+        INotificationSender notifications,
+        IAuditSink auditSink,
+        IJobListingReader jobListings,
+        IJobListingWriter jobListingWriter,
+        ILogger<JobService> logger)
     {
         _jobs = jobs;
         _unitOfWork = unitOfWork;
         _notifications = notifications;
         _auditSink = auditSink;
+        _jobListings = jobListings;
+        _jobListingWriter = jobListingWriter;
         _logger = logger;
     }
 
@@ -41,7 +54,7 @@ public sealed class JobService
 
     public async Task<PagedResult<JobResponse>> ListAsync(JobListQuery query, CancellationToken cancellationToken = default)
     {
-        var paged = await _jobs.ListAsync(query, cancellationToken);
+        var paged = await _jobListings.ListAsync(query, cancellationToken);
         var items = paged.Items.Select(ToResponse).ToList();
         return new PagedResult<JobResponse>(items, paged.Page, paged.PageSize, paged.TotalCount);
     }
@@ -67,6 +80,7 @@ public sealed class JobService
             await _unitOfWork.SaveChangesAsync(cancellationToken);
             await _notifications.NotifyAsync("job.created", new { job.Id, job.CustomerId }, cancellationToken);
             await _auditSink.WriteAsync("job.created", new { job.Id, job.CustomerId, job.Status }, cancellationToken);
+            await _jobListingWriter.UpsertAsync(ToWriteModel(job), cancellationToken);
             return ToResponse(job);
         }
         catch (DomainRuleViolationException ex)
@@ -91,6 +105,7 @@ public sealed class JobService
 
             _logger.LogInformation("Job updated {JobId}", job.Id);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
+            await _jobListingWriter.UpsertAsync(ToWriteModel(job), cancellationToken);
             return ToResponse(job);
         }
         catch (DomainRuleViolationException ex)
@@ -122,6 +137,7 @@ public sealed class JobService
 
             _logger.LogInformation("Job patched {JobId}", job.Id);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
+            await _jobListingWriter.UpsertAsync(ToWriteModel(job), cancellationToken);
             return ToResponse(job);
         }
         catch (DomainRuleViolationException ex)
@@ -180,6 +196,7 @@ public sealed class JobService
             await _unitOfWork.SaveChangesAsync(cancellationToken);
             await _notifications.NotifyAsync("job.status_changed", new { job.Id, job.Status }, cancellationToken);
             await _auditSink.WriteAsync("job.status_changed", new { job.Id, job.Status }, cancellationToken);
+            await _jobListingWriter.UpsertAsync(ToWriteModel(job), cancellationToken);
             return ToResponse(job);
         }
         catch (DomainRuleViolationException ex)
@@ -191,6 +208,30 @@ public sealed class JobService
     private static JobResponse ToResponse(Job job)
     {
         return new JobResponse(
+            job.Id,
+            job.CustomerId,
+            job.Location,
+            job.ServiceIds.ToArray(),
+            job.Status.ToString(),
+            job.ActiveBookingId,
+            job.UpdatedUtc);
+    }
+
+    private static JobResponse ToResponse(JobListingRow row)
+    {
+        return new JobResponse(
+            row.Id,
+            row.CustomerId,
+            row.Location,
+            row.ServiceIds,
+            row.Status,
+            row.ActiveBookingId,
+            row.UpdatedUtc);
+    }
+
+    private static JobListingWriteModel ToWriteModel(Job job)
+    {
+        return new JobListingWriteModel(
             job.Id,
             job.CustomerId,
             job.Location,

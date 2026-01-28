@@ -67,6 +67,7 @@ This document defines the initial API surface area and naming conventions.
 - `POST /api/v1/providers`
 - `PUT /api/v1/providers/{providerId}`
 - `PATCH /api/v1/providers/{providerId}`
+- `PUT /api/v1/providers/{providerId}/availability` (replace all)
 
 ### Customers
 

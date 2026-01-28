@@ -61,3 +61,8 @@ If `Notifications:WebhookUrl` is configured, the API posts a JSON payload for ke
 - `booking.created`, `booking.status_changed`
 - `provider.registered`, `provider.updated`
 - `provider.availability_added`, `provider.availability_removed`
+- `provider.availability_replaced`
+
+## Caching
+
+Provider availability lookups are cached in memory for a short TTL (default 30 seconds) to reduce repeated reads.

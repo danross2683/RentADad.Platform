@@ -18,9 +18,9 @@
 
 ### P1 Performance
 
-- [ ] Add caching strategy for provider availability searches
-- [ ] Add read models for job listings
-- [ ] Add bulk operations for provider availability
+- [x] Add caching strategy for provider availability searches
+- [x] Add read models for job listings
+- [x] Add bulk operations for provider availability
 
 ### P2 Security
 

@@ -312,6 +312,23 @@ Response (200):
 }
 ```
 
+### Replace Availability (bulk)
+
+`PUT /api/v1/providers/{providerId}/availability`
+
+Request:
+
+```json
+{
+  "slots": [
+    { "startUtc": "2026-02-01T09:00:00Z", "endUtc": "2026-02-01T12:00:00Z" },
+    { "startUtc": "2026-02-02T09:00:00Z", "endUtc": "2026-02-02T12:00:00Z" }
+  ]
+}
+```
+
+Response (200): `ProviderResponse`.
+
 ### Remove Availability
 
 `DELETE /api/v1/providers/{providerId}/availability/{availabilityId}`

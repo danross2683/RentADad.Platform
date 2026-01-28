@@ -7,6 +7,7 @@ using RentADad.Application.Abstractions.Persistence;
 using RentADad.Application.Abstractions.Repositories;
 using RentADad.Application.Abstractions.Notifications;
 using RentADad.Application.Abstractions.Auditing;
+using RentADad.Application.Abstractions.Caching;
 using RentADad.Application.Common.Paging;
 using RentADad.Application.Providers.Requests;
 using RentADad.Application.Providers.Responses;
@@ -21,21 +22,42 @@ public sealed class ProviderService
     private readonly IUnitOfWork _unitOfWork;
     private readonly INotificationSender _notifications;
     private readonly IAuditSink _auditSink;
+    private readonly ICacheStore _cache;
+    private readonly CacheSettings _cacheSettings;
     private readonly ILogger<ProviderService> _logger;
 
-    public ProviderService(IProviderRepository providers, IUnitOfWork unitOfWork, INotificationSender notifications, IAuditSink auditSink, ILogger<ProviderService> logger)
+    public ProviderService(
+        IProviderRepository providers,
+        IUnitOfWork unitOfWork,
+        INotificationSender notifications,
+        IAuditSink auditSink,
+        ICacheStore cache,
+        CacheSettings cacheSettings,
+        ILogger<ProviderService> logger)
     {
         _providers = providers;
         _unitOfWork = unitOfWork;
         _notifications = notifications;
         _auditSink = auditSink;
+        _cache = cache;
+        _cacheSettings = cacheSettings;
         _logger = logger;
     }
 
     public async Task<ProviderResponse?> GetAsync(Guid providerId, CancellationToken cancellationToken = default)
     {
+        var cacheKey = GetProviderCacheKey(providerId);
+        if (_cache.TryGet(cacheKey, out ProviderResponse? cached))
+        {
+            return cached;
+        }
+
         var provider = await _providers.GetByIdAsync(providerId, cancellationToken);
-        return provider is null ? null : ToResponse(provider);
+        if (provider is null) return null;
+
+        var response = ToResponse(provider);
+        _cache.Set(cacheKey, response, TimeSpan.FromSeconds(_cacheSettings.ProviderAvailabilitySeconds));
+        return response;
     }
 
     public async Task<PagedResult<ProviderResponse>> ListAsync(ProviderListQuery query, CancellationToken cancellationToken = default)
@@ -56,6 +78,7 @@ public sealed class ProviderService
             await _unitOfWork.SaveChangesAsync(cancellationToken);
             await _notifications.NotifyAsync("provider.registered", new { provider.Id, provider.DisplayName }, cancellationToken);
             await _auditSink.WriteAsync("provider.registered", new { provider.Id, provider.DisplayName }, cancellationToken);
+            _cache.Remove(GetProviderCacheKey(provider.Id));
             return ToResponse(provider);
         }
         catch (DomainRuleViolationException ex)
@@ -74,6 +97,7 @@ public sealed class ProviderService
         await _unitOfWork.SaveChangesAsync(cancellationToken);
         await _notifications.NotifyAsync("provider.updated", new { provider.Id }, cancellationToken);
         await _auditSink.WriteAsync("provider.updated", new { provider.Id }, cancellationToken);
+        _cache.Remove(GetProviderCacheKey(provider.Id));
         return ToResponse(provider);
     }
 
@@ -90,6 +114,7 @@ public sealed class ProviderService
             await _unitOfWork.SaveChangesAsync(cancellationToken);
             await _notifications.NotifyAsync("provider.availability_added", new { provider.Id }, cancellationToken);
             await _auditSink.WriteAsync("provider.availability_added", new { provider.Id }, cancellationToken);
+            _cache.Remove(GetProviderCacheKey(provider.Id));
             return ToResponse(provider);
         }
         catch (ProviderDomainException)
@@ -112,8 +137,42 @@ public sealed class ProviderService
         await _unitOfWork.SaveChangesAsync(cancellationToken);
         await _notifications.NotifyAsync("provider.availability_removed", new { provider.Id, availabilityId }, cancellationToken);
         await _auditSink.WriteAsync("provider.availability_removed", new { provider.Id, availabilityId }, cancellationToken);
+        _cache.Remove(GetProviderCacheKey(provider.Id));
         return ToResponse(provider);
     }
+
+    public async Task<ProviderResponse?> ReplaceAvailabilityAsync(Guid providerId, ReplaceAvailabilityRequest request, CancellationToken cancellationToken = default)
+    {
+        var provider = await _providers.GetForUpdateAsync(providerId, cancellationToken);
+        if (provider is null) return null;
+
+        try
+        {
+            provider.ClearAvailabilities();
+            foreach (var slot in request.Slots)
+            {
+                ValidateTimeWindow(slot.StartUtc, slot.EndUtc);
+                provider.AddAvailability(slot.StartUtc, slot.EndUtc);
+            }
+
+            _logger.LogInformation("Provider availability replaced {ProviderId}", provider.Id);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+            await _notifications.NotifyAsync("provider.availability_replaced", new { provider.Id }, cancellationToken);
+            await _auditSink.WriteAsync("provider.availability_replaced", new { provider.Id }, cancellationToken);
+            _cache.Remove(GetProviderCacheKey(provider.Id));
+            return ToResponse(provider);
+        }
+        catch (ProviderDomainException)
+        {
+            throw;
+        }
+        catch (DomainRuleViolationException ex)
+        {
+            throw new ProviderDomainException(ex.Message, MapProviderErrorCode(ex.Message));
+        }
+    }
+
+    private static string GetProviderCacheKey(Guid providerId) => $"provider:{providerId}";
 
     private static ProviderResponse ToResponse(Provider provider)
     {

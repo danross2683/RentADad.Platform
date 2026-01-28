@@ -24,10 +24,13 @@ using RentADad.Api.Middleware;
 using RentADad.Api.Notifications;
 using RentADad.Api.Results;
 using RentADad.Api.Auditing;
+using RentADad.Api.Caching;
 using RentADad.Application.Abstractions.Persistence;
 using RentADad.Application.Abstractions.Repositories;
 using RentADad.Application.Abstractions.Notifications;
 using RentADad.Application.Abstractions.Auditing;
+using RentADad.Application.Abstractions.ReadModels;
+using RentADad.Application.Abstractions.Caching;
 using RentADad.Application.Bookings;
 using RentADad.Application.Bookings.Requests;
 using RentADad.Application.Bookings.Validators;
@@ -76,6 +79,8 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 });
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<IJobRepository, JobRepository>();
+builder.Services.AddScoped<IJobListingReader, JobListingRepository>();
+builder.Services.AddScoped<IJobListingWriter, JobListingRepository>();
 builder.Services.AddScoped<IBookingRepository, BookingRepository>();
 builder.Services.AddScoped<IProviderRepository, ProviderRepository>();
 builder.Services.AddScoped<AppJobService>();
@@ -87,6 +92,13 @@ builder.Services.AddScoped<DevSeeder>();
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<INotificationSender, WebhookNotificationSender>();
 builder.Services.AddScoped<IAuditSink, LogAuditSink>();
+builder.Services.AddMemoryCache();
+var cacheSettings = new CacheSettings
+{
+    ProviderAvailabilitySeconds = builder.Configuration.GetValue("Caching:ProviderAvailabilitySeconds", 30)
+};
+builder.Services.AddSingleton(cacheSettings);
+builder.Services.AddSingleton<ICacheStore, MemoryCacheStore>();
 builder.Services.AddHealthChecks()
     .AddCheck("self", () => HealthCheckResult.Healthy(), tags: new[] { "live" })
     .AddCheck<DbReadyHealthCheck>("db", tags: new[] { "ready" });
@@ -738,6 +750,25 @@ ApplyWriteAuth(providers.MapPost("/{providerId:guid}/availability", async (Provi
     if (etagProblem is not null) return etagProblem;
 
     var provider = await providerService.AddAvailabilityAsync(providerId, request);
+    return provider is null ? Results.NotFound() : WithEtag(Results.Ok(provider), provider.UpdatedUtc);
+}), authEnabled);
+
+ApplyWriteAuth(providers.MapPut("/{providerId:guid}/availability", async (
+    ProviderService providerService,
+    IValidator<ReplaceAvailabilityRequest> validator,
+    HttpRequest httpRequest,
+    Guid providerId,
+    ReplaceAvailabilityRequest request) =>
+{
+    var validation = await validator.ValidateAsync(request);
+    if (!validation.IsValid) return Results.ValidationProblem(ToProblem(validation), extensions: BuildProblemExtensions());
+
+    var current = await providerService.GetAsync(providerId);
+    if (current is null) return Results.NotFound();
+    var etagProblem = ValidateIfMatch(httpRequest, current.UpdatedUtc);
+    if (etagProblem is not null) return etagProblem;
+
+    var provider = await providerService.ReplaceAvailabilityAsync(providerId, request);
     return provider is null ? Results.NotFound() : WithEtag(Results.Ok(provider), provider.UpdatedUtc);
 }), authEnabled);
 

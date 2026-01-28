@@ -52,6 +52,11 @@ public sealed class Provider
         _availabilities.Remove(availability);
     }
 
+    public void ClearAvailabilities()
+    {
+        _availabilities.Clear();
+    }
+
     public bool IsAvailable(DateTime startUtc, DateTime endUtc)
     {
         return _availabilities.Any(a => a.Contains(startUtc, endUtc));
