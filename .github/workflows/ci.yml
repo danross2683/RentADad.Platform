@@ -17,6 +17,11 @@ jobs:
         with:
           global-json-file: global.json
 
+      - name: Setup .NET 7 runtime for licence tool
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "7.0.x"
+
       - name: Restore
         run: dotnet restore
 
