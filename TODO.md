@@ -4,17 +4,17 @@
 
 ### P0 Productization
 
-- [ ] Implement auth flows (JWT validation + roles/claims)
-- [ ] Add API key alternative for service-to-service use
-- [ ] Implement idempotency key storage (backed by DB)
-- [ ] Add outbound notification stub (email/sms webhook)
+- [x] Implement auth flows (JWT validation + roles/claims)
+- [x] Add API key alternative for service-to-service use
+- [x] Implement idempotency key storage (backed by DB)
+- [x] Add outbound notification stub (email/sms webhook)
 
 ### P1 Operations
 
-- [ ] Add structured audit logs for state transitions
-- [ ] Add admin endpoints for job/booking oversight
-- [ ] Add backup/restore runbook
-- [ ] Add deployment checklist and rollback plan
+- [x] Add structured audit logs for state transitions
+- [x] Add admin endpoints for job/booking oversight
+- [x] Add backup/restore runbook
+- [x] Add deployment checklist and rollback plan
 
 ### P1 Performance
 

@@ -32,7 +32,7 @@ See `docs/API_CONTRACTS.md` for request/response examples.
 
 - Liveness: `GET /health/live`
 - Readiness: `GET /health/ready` (checks database connectivity)
-- Metrics: `GET /metrics` (Prometheus scrape)
+- Metrics: exported via OTLP to the configured collector
 
 ## Idempotency
 
@@ -43,3 +43,21 @@ Write actions should be idempotent where possible. Clients are expected to:
 - and avoid replaying different payloads with the same key.
 
 The server may reject conflicting replays with a 409 when idempotency is enforced.
+By default, keys are retained for 24 hours.
+
+## API keys (service-to-service)
+
+If `Auth:ApiKeys` is configured, requests may authenticate with:
+
+- Header: `X-API-Key: <key>`
+
+Valid API keys are granted the `admin` role for write access.
+
+## Notifications (webhook)
+
+If `Notifications:WebhookUrl` is configured, the API posts a JSON payload for key events:
+
+- `job.created`, `job.status_changed`
+- `booking.created`, `booking.status_changed`
+- `provider.registered`, `provider.updated`
+- `provider.availability_added`, `provider.availability_removed`

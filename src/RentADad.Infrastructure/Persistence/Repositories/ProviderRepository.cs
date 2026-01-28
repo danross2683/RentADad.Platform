@@ -28,7 +28,9 @@ public sealed class ProviderRepository : IProviderRepository
         if (!string.IsNullOrWhiteSpace(query.DisplayNameContains))
         {
             var term = query.DisplayNameContains.Trim();
-            providers = providers.Where(provider => EF.Functions.ILike(provider.DisplayName, $"%{term}%"));
+            var lowered = term.ToLower();
+            providers = providers.Where(provider =>
+                EF.Functions.Like(provider.DisplayName.ToLower(), $"%{lowered}%"));
         }
 
         var total = await providers.CountAsync(cancellationToken);

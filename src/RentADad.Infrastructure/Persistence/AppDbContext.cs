@@ -15,6 +15,7 @@ public sealed class AppDbContext : DbContext
     public DbSet<Job> Jobs => Set<Job>();
     public DbSet<Booking> Bookings => Set<Booking>();
     public DbSet<Provider> Providers => Set<Provider>();
+    public DbSet<IdempotencyKey> IdempotencyKeys => Set<IdempotencyKey>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

@@ -5,6 +5,8 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using RentADad.Application.Abstractions.Persistence;
 using RentADad.Application.Abstractions.Repositories;
+using RentADad.Application.Abstractions.Notifications;
+using RentADad.Application.Abstractions.Auditing;
 using RentADad.Application.Common.Paging;
 using RentADad.Application.Providers.Requests;
 using RentADad.Application.Providers.Responses;
@@ -17,12 +19,16 @@ public sealed class ProviderService
 {
     private readonly IProviderRepository _providers;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly INotificationSender _notifications;
+    private readonly IAuditSink _auditSink;
     private readonly ILogger<ProviderService> _logger;
 
-    public ProviderService(IProviderRepository providers, IUnitOfWork unitOfWork, ILogger<ProviderService> logger)
+    public ProviderService(IProviderRepository providers, IUnitOfWork unitOfWork, INotificationSender notifications, IAuditSink auditSink, ILogger<ProviderService> logger)
     {
         _providers = providers;
         _unitOfWork = unitOfWork;
+        _notifications = notifications;
+        _auditSink = auditSink;
         _logger = logger;
     }
 
@@ -48,6 +54,8 @@ public sealed class ProviderService
             _providers.Add(provider);
             _logger.LogInformation("Provider registered {ProviderId}", provider.Id);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
+            await _notifications.NotifyAsync("provider.registered", new { provider.Id, provider.DisplayName }, cancellationToken);
+            await _auditSink.WriteAsync("provider.registered", new { provider.Id, provider.DisplayName }, cancellationToken);
             return ToResponse(provider);
         }
         catch (DomainRuleViolationException ex)
@@ -64,6 +72,8 @@ public sealed class ProviderService
         provider.UpdateDisplayName(request.DisplayName ?? string.Empty);
         _logger.LogInformation("Provider updated {ProviderId}", provider.Id);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _notifications.NotifyAsync("provider.updated", new { provider.Id }, cancellationToken);
+        await _auditSink.WriteAsync("provider.updated", new { provider.Id }, cancellationToken);
         return ToResponse(provider);
     }
 
@@ -78,6 +88,8 @@ public sealed class ProviderService
             provider.AddAvailability(request.StartUtc, request.EndUtc);
             _logger.LogInformation("Provider availability added {ProviderId}", provider.Id);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
+            await _notifications.NotifyAsync("provider.availability_added", new { provider.Id }, cancellationToken);
+            await _auditSink.WriteAsync("provider.availability_added", new { provider.Id }, cancellationToken);
             return ToResponse(provider);
         }
         catch (ProviderDomainException)
@@ -98,6 +110,8 @@ public sealed class ProviderService
         provider.RemoveAvailability(availabilityId);
         _logger.LogInformation("Provider availability removed {ProviderId} {AvailabilityId}", provider.Id, availabilityId);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _notifications.NotifyAsync("provider.availability_removed", new { provider.Id, availabilityId }, cancellationToken);
+        await _auditSink.WriteAsync("provider.availability_removed", new { provider.Id, availabilityId }, cancellationToken);
         return ToResponse(provider);
     }
 

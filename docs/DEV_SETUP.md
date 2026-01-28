@@ -47,3 +47,13 @@ just migrate
 just seed-demo
 just run
 ```
+
+## Dev auth helper
+
+When `Auth:Enabled` is true in Development, you can request a dev token:
+
+```shell
+POST /api/v1/auth/dev-token
+```
+
+The response includes an `accessToken` with `role=admin`.

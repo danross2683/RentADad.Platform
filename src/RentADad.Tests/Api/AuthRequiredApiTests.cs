@@ -4,11 +4,11 @@ using FluentAssertions;
 
 namespace RentADad.Tests.Api;
 
-public sealed class AuthRequiredApiTests : IClassFixture<TestApplicationFactory>
+public sealed class AuthRequiredApiTests : IClassFixture<AuthEnabledTestApplicationFactory>
 {
-    private readonly TestApplicationFactory _factory;
+    private readonly AuthEnabledTestApplicationFactory _factory;
 
-    public AuthRequiredApiTests(TestApplicationFactory factory)
+    public AuthRequiredApiTests(AuthEnabledTestApplicationFactory factory)
     {
         _factory = factory;
     }

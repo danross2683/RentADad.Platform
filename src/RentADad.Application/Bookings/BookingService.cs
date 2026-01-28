@@ -5,6 +5,8 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using RentADad.Application.Abstractions.Persistence;
 using RentADad.Application.Abstractions.Repositories;
+using RentADad.Application.Abstractions.Notifications;
+using RentADad.Application.Abstractions.Auditing;
 using RentADad.Application.Bookings.Requests;
 using RentADad.Application.Bookings.Responses;
 using RentADad.Application.Common.Paging;
@@ -17,12 +19,16 @@ public sealed class BookingService
 {
     private readonly IBookingRepository _bookings;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly INotificationSender _notifications;
+    private readonly IAuditSink _auditSink;
     private readonly ILogger<BookingService> _logger;
 
-    public BookingService(IBookingRepository bookings, IUnitOfWork unitOfWork, ILogger<BookingService> logger)
+    public BookingService(IBookingRepository bookings, IUnitOfWork unitOfWork, INotificationSender notifications, IAuditSink auditSink, ILogger<BookingService> logger)
     {
         _bookings = bookings;
         _unitOfWork = unitOfWork;
+        _notifications = notifications;
+        _auditSink = auditSink;
         _logger = logger;
     }
 
@@ -55,6 +61,8 @@ public sealed class BookingService
             _bookings.Add(booking);
             _logger.LogInformation("Booking created {BookingId} for job {JobId}", booking.Id, booking.JobId);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
+            await _notifications.NotifyAsync("booking.created", new { booking.Id, booking.JobId }, cancellationToken);
+            await _auditSink.WriteAsync("booking.created", new { booking.Id, booking.JobId, booking.Status }, cancellationToken);
             return ToResponse(booking);
         }
         catch (BookingDomainException)
@@ -100,6 +108,8 @@ public sealed class BookingService
             action(booking);
             _logger.LogInformation("Booking status changed {BookingId} -> {Status}", booking.Id, booking.Status);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
+            await _notifications.NotifyAsync("booking.status_changed", new { booking.Id, booking.Status }, cancellationToken);
+            await _auditSink.WriteAsync("booking.status_changed", new { booking.Id, booking.Status }, cancellationToken);
             return ToResponse(booking);
         }
         catch (DomainRuleViolationException ex)

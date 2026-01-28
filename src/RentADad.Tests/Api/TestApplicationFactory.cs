@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data.Common;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -22,10 +23,7 @@ public sealed class TestApplicationFactory : WebApplicationFactory<Program>
         {
             config.AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["Auth:Enabled"] = "true",
-                ["Auth:Issuer"] = "test",
-                ["Auth:Audience"] = "test",
-                ["Auth:SigningKey"] = "test-signing-key"
+                ["Auth:Enabled"] = "false"
             });
         });
 

@@ -1,7 +1,7 @@
 {
   "version": 2,
-  "dgSpecHash": "CRrBLeQxtf8=",
-  "success": false,
+  "dgSpecHash": "pLb5IwR8Kyc=",
+  "success": true,
   "projectFilePath": "C:\\Users\\danross\\source\\RentADad.Platform\\src\\RentADad.Api\\RentADad.Api.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\danross\\.nuget\\packages\\fluentvalidation\\12.1.1\\fluentvalidation.12.1.1.nupkg.sha512",
@@ -29,43 +29,19 @@
     "C:\\Users\\danross\\.nuget\\packages\\microsoft.openapi\\2.0.0\\microsoft.openapi.2.0.0.nupkg.sha512",
     "C:\\Users\\danross\\.nuget\\packages\\npgsql\\10.0.0\\npgsql.10.0.0.nupkg.sha512",
     "C:\\Users\\danross\\.nuget\\packages\\npgsql.entityframeworkcore.postgresql\\10.0.0\\npgsql.entityframeworkcore.postgresql.10.0.0.nupkg.sha512",
-    "C:\\Users\\danross\\.nuget\\packages\\opentelemetry\\1.10.0\\opentelemetry.1.10.0.nupkg.sha512",
-    "C:\\Users\\danross\\.nuget\\packages\\opentelemetry.api\\1.10.0\\opentelemetry.api.1.10.0.nupkg.sha512",
-    "C:\\Users\\danross\\.nuget\\packages\\opentelemetry.api.providerbuilderextensions\\1.10.0\\opentelemetry.api.providerbuilderextensions.1.10.0.nupkg.sha512",
-    "C:\\Users\\danross\\.nuget\\packages\\opentelemetry.exporter.opentelemetryprotocol\\1.10.0\\opentelemetry.exporter.opentelemetryprotocol.1.10.0.nupkg.sha512",
-    "C:\\Users\\danross\\.nuget\\packages\\opentelemetry.extensions.hosting\\1.10.0\\opentelemetry.extensions.hosting.1.10.0.nupkg.sha512",
-    "C:\\Users\\danross\\.nuget\\packages\\opentelemetry.instrumentation.aspnetcore\\1.10.0\\opentelemetry.instrumentation.aspnetcore.1.10.0.nupkg.sha512",
-    "C:\\Users\\danross\\.nuget\\packages\\opentelemetry.instrumentation.http\\1.10.0\\opentelemetry.instrumentation.http.1.10.0.nupkg.sha512",
-    "C:\\Users\\danross\\.nuget\\packages\\opentelemetry.instrumentation.runtime\\1.10.0\\opentelemetry.instrumentation.runtime.1.10.0.nupkg.sha512",
+    "C:\\Users\\danross\\.nuget\\packages\\opentelemetry\\1.9.0\\opentelemetry.1.9.0.nupkg.sha512",
+    "C:\\Users\\danross\\.nuget\\packages\\opentelemetry.api\\1.9.0\\opentelemetry.api.1.9.0.nupkg.sha512",
+    "C:\\Users\\danross\\.nuget\\packages\\opentelemetry.api.providerbuilderextensions\\1.9.0\\opentelemetry.api.providerbuilderextensions.1.9.0.nupkg.sha512",
+    "C:\\Users\\danross\\.nuget\\packages\\opentelemetry.exporter.opentelemetryprotocol\\1.9.0\\opentelemetry.exporter.opentelemetryprotocol.1.9.0.nupkg.sha512",
+    "C:\\Users\\danross\\.nuget\\packages\\opentelemetry.extensions.hosting\\1.9.0\\opentelemetry.extensions.hosting.1.9.0.nupkg.sha512",
+    "C:\\Users\\danross\\.nuget\\packages\\opentelemetry.instrumentation.aspnetcore\\1.9.0\\opentelemetry.instrumentation.aspnetcore.1.9.0.nupkg.sha512",
+    "C:\\Users\\danross\\.nuget\\packages\\opentelemetry.instrumentation.http\\1.9.0\\opentelemetry.instrumentation.http.1.9.0.nupkg.sha512",
+    "C:\\Users\\danross\\.nuget\\packages\\opentelemetry.instrumentation.runtime\\1.9.0\\opentelemetry.instrumentation.runtime.1.9.0.nupkg.sha512",
     "C:\\Users\\danross\\.nuget\\packages\\sqlitepclraw.bundle_e_sqlite3\\2.1.11\\sqlitepclraw.bundle_e_sqlite3.2.1.11.nupkg.sha512",
     "C:\\Users\\danross\\.nuget\\packages\\sqlitepclraw.core\\2.1.11\\sqlitepclraw.core.2.1.11.nupkg.sha512",
     "C:\\Users\\danross\\.nuget\\packages\\sqlitepclraw.lib.e_sqlite3\\2.1.11\\sqlitepclraw.lib.e_sqlite3.2.1.11.nupkg.sha512",
     "C:\\Users\\danross\\.nuget\\packages\\sqlitepclraw.provider.e_sqlite3\\2.1.11\\sqlitepclraw.provider.e_sqlite3.2.1.11.nupkg.sha512",
     "C:\\Users\\danross\\.nuget\\packages\\system.identitymodel.tokens.jwt\\8.0.1\\system.identitymodel.tokens.jwt.8.0.1.nupkg.sha512"
   ],
-  "logs": [
-    {
-      "code": "NU1103",
-      "level": "Error",
-      "message": "Unable to find a stable package OpenTelemetry.Exporter.Prometheus.AspNetCore with version (>= 1.10.0)\r\n  - Found 28 version(s) in nuget.org [ Nearest version: 1.11.0-beta.1 ]\r\n  - Found 0 version(s) in Microsoft Visual Studio Offline Packages\r\n  - Found 0 version(s) in C:\\Program Files\\dotnet\\library-packs",
-      "projectPath": "C:\\Users\\danross\\source\\RentADad.Platform\\src\\RentADad.Api\\RentADad.Api.csproj",
-      "filePath": "C:\\Users\\danross\\source\\RentADad.Platform\\src\\RentADad.Api\\RentADad.Api.csproj",
-      "libraryId": "OpenTelemetry.Exporter.Prometheus.AspNetCore",
-      "targetGraphs": [
-        "net10.0"
-      ]
-    },
-    {
-      "code": "NU1902",
-      "level": "Warning",
-      "message": "Package 'OpenTelemetry.Api' 1.10.0 has a known moderate severity vulnerability, https://github.com/advisories/GHSA-8785-wc3w-h8q6",
-      "projectPath": "C:\\Users\\danross\\source\\RentADad.Platform\\src\\RentADad.Api\\RentADad.Api.csproj",
-      "warningLevel": 1,
-      "filePath": "C:\\Users\\danross\\source\\RentADad.Platform\\src\\RentADad.Api\\RentADad.Api.csproj",
-      "libraryId": "OpenTelemetry.Api",
-      "targetGraphs": [
-        "net10.0"
-      ]
-    }
-  ]
+  "logs": []
 }

@@ -6,6 +6,8 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using RentADad.Application.Abstractions.Persistence;
 using RentADad.Application.Abstractions.Repositories;
+using RentADad.Application.Abstractions.Notifications;
+using RentADad.Application.Abstractions.Auditing;
 using RentADad.Application.Common.Paging;
 using RentADad.Application.Jobs.Requests;
 using RentADad.Application.Jobs.Responses;
@@ -18,12 +20,16 @@ public sealed class JobService
 {
     private readonly IJobRepository _jobs;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly INotificationSender _notifications;
+    private readonly IAuditSink _auditSink;
     private readonly ILogger<JobService> _logger;
 
-    public JobService(IJobRepository jobs, IUnitOfWork unitOfWork, ILogger<JobService> logger)
+    public JobService(IJobRepository jobs, IUnitOfWork unitOfWork, INotificationSender notifications, IAuditSink auditSink, ILogger<JobService> logger)
     {
         _jobs = jobs;
         _unitOfWork = unitOfWork;
+        _notifications = notifications;
+        _auditSink = auditSink;
         _logger = logger;
     }
 
@@ -59,6 +65,8 @@ public sealed class JobService
             _logger.LogInformation("Job created {JobId} for customer {CustomerId}", job.Id, job.CustomerId);
             _jobs.Add(job);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
+            await _notifications.NotifyAsync("job.created", new { job.Id, job.CustomerId }, cancellationToken);
+            await _auditSink.WriteAsync("job.created", new { job.Id, job.CustomerId, job.Status }, cancellationToken);
             return ToResponse(job);
         }
         catch (DomainRuleViolationException ex)
@@ -170,6 +178,8 @@ public sealed class JobService
             action(job);
             _logger.LogInformation("Job lifecycle transition {JobId} -> {Status}", job.Id, job.Status);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
+            await _notifications.NotifyAsync("job.status_changed", new { job.Id, job.Status }, cancellationToken);
+            await _auditSink.WriteAsync("job.status_changed", new { job.Id, job.Status }, cancellationToken);
             return ToResponse(job);
         }
         catch (DomainRuleViolationException ex)

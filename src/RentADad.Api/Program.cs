@@ -2,9 +2,12 @@ using System.Linq;
 using System.Text;
 using System.Threading.RateLimiting;
 using System.Diagnostics;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using FluentValidation;
 using FluentValidation.Results;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
@@ -14,15 +17,21 @@ using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using RentADad.Api;
+using RentADad.Api.Auth;
 using RentADad.Api.Background;
 using RentADad.Api.Health;
+using RentADad.Api.Middleware;
+using RentADad.Api.Notifications;
 using RentADad.Api.Results;
+using RentADad.Api.Auditing;
 using RentADad.Application.Abstractions.Persistence;
 using RentADad.Application.Abstractions.Repositories;
+using RentADad.Application.Abstractions.Notifications;
+using RentADad.Application.Abstractions.Auditing;
 using RentADad.Application.Bookings;
 using RentADad.Application.Bookings.Requests;
 using RentADad.Application.Bookings.Validators;
-using RentADad.Application.Jobs;
+using AppJobService = RentADad.Application.Jobs.JobService;
 using RentADad.Application.Providers;
 using RentADad.Application.Providers.Requests;
 using RentADad.Application.Jobs.Requests;
@@ -30,7 +39,8 @@ using RentADad.Application.Jobs.Validators;
 using RentADad.Application.Providers.Validators;
 using RentADad.Api.Seed;
 using RentADad.Domain.Bookings;
-using RentADad.Domain.Jobs;
+using DomainJobs = RentADad.Domain.Jobs;
+using RentADad.Application.Jobs;
 using RentADad.Infrastructure.Persistence;
 using RentADad.Infrastructure.Persistence.Repositories;
 
@@ -68,12 +78,15 @@ builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<IJobRepository, JobRepository>();
 builder.Services.AddScoped<IBookingRepository, BookingRepository>();
 builder.Services.AddScoped<IProviderRepository, ProviderRepository>();
-builder.Services.AddScoped<JobService>();
+builder.Services.AddScoped<AppJobService>();
 builder.Services.AddScoped<BookingService>();
 builder.Services.AddScoped<ProviderService>();
 builder.Services.AddValidatorsFromAssemblyContaining<CreateJobRequestValidator>();
 builder.Services.AddProblemDetails();
 builder.Services.AddScoped<DevSeeder>();
+builder.Services.AddHttpClient();
+builder.Services.AddScoped<INotificationSender, WebhookNotificationSender>();
+builder.Services.AddScoped<IAuditSink, LogAuditSink>();
 builder.Services.AddHealthChecks()
     .AddCheck("self", () => HealthCheckResult.Healthy(), tags: new[] { "live" })
     .AddCheck<DbReadyHealthCheck>("db", tags: new[] { "ready" });
@@ -113,7 +126,6 @@ builder.Services.AddOpenTelemetry()
             .AddAspNetCoreInstrumentation()
             .AddHttpClientInstrumentation()
             .AddRuntimeInstrumentation()
-            .AddProcessInstrumentation()
             .AddOtlpExporter(options =>
             {
                 var endpoint = builder.Configuration["OpenTelemetry:OtlpEndpoint"];
@@ -121,13 +133,11 @@ builder.Services.AddOpenTelemetry()
                 {
                     options.Endpoint = new Uri(endpoint);
                 }
-            })
-            .AddPrometheusExporter());
+            }));
 
 var authEnabled = builder.Configuration.GetValue("Auth:Enabled", false);
 if (authEnabled)
 {
-    builder.Services.AddSingleton<IStartupFilter, AuthTestStartupFilter>();
     builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         .AddJwtBearer(options =>
         {
@@ -148,11 +158,15 @@ if (authEnabled)
 
     builder.Services.AddAuthorization(options =>
     {
-        options.FallbackPolicy = new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder()
+        options.FallbackPolicy = new AuthorizationPolicyBuilder()
             .RequireAuthenticatedUser()
             .Build();
+        options.AddPolicy("WriteAccess", policy =>
+            policy.RequireRole("admin"));
     });
 }
+
+builder.Services.AddSingleton<ApiKeyAuthMiddleware>();
 
 var app = builder.Build();
 
@@ -161,16 +175,17 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
-app.MapPrometheusScrapingEndpoint("/metrics");
-
 if (authEnabled)
 {
     app.UseAuthentication();
     app.UseAuthorization();
 }
 
+app.UseMiddleware<ApiKeyAuthMiddleware>();
+
 app.UseRateLimiter();
 app.UseHttpsRedirection();
+app.UseMiddleware<IdempotencyMiddleware>();
 
 app.Use(async (context, next) =>
 {
@@ -282,15 +297,54 @@ app.UseExceptionHandler(exceptionApp =>
 var jobs = app.MapGroup("/api/v1/jobs").WithTags("Jobs");
 var bookings = app.MapGroup("/api/v1/bookings").WithTags("Bookings");
 var providers = app.MapGroup("/api/v1/providers").WithTags("Providers");
+var admin = app.MapGroup("/api/v1/admin").WithTags("Admin");
 
-jobs.MapGet("/", async (JobService jobService) =>
+if (app.Environment.IsEnvironment("Testing"))
 {
-    var results = await jobService.ListAsync();
-    return Results.Ok(results);
-}).AllowAnonymous();
+    var authFilter = new AuthTestEndpointFilter();
+    jobs.AddEndpointFilter(authFilter);
+    bookings.AddEndpointFilter(authFilter);
+    providers.AddEndpointFilter(authFilter);
+    admin.AddEndpointFilter(authFilter);
+}
 
-jobs.MapGet("/search", async (
-    JobService jobService,
+if (app.Environment.IsDevelopment())
+{
+    app.MapPost("/api/v1/auth/dev-token", (IConfiguration config) =>
+    {
+        var signingKey = config["Auth:SigningKey"];
+        var issuer = config["Auth:Issuer"];
+        var audience = config["Auth:Audience"];
+
+        if (string.IsNullOrWhiteSpace(signingKey) ||
+            string.IsNullOrWhiteSpace(issuer) ||
+            string.IsNullOrWhiteSpace(audience))
+        {
+            return Results.BadRequest(new { message = "Auth settings are required for dev token." });
+        }
+
+        var claims = new[]
+        {
+            new Claim(ClaimTypes.Name, "dev-user"),
+            new Claim(ClaimTypes.Role, "admin")
+        };
+
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(signingKey));
+        var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+        var token = new JwtSecurityToken(
+            issuer,
+            audience,
+            claims,
+            expires: DateTime.UtcNow.AddHours(4),
+            signingCredentials: creds);
+
+        var jwt = new JwtSecurityTokenHandler().WriteToken(token);
+        return Results.Ok(new { accessToken = jwt });
+    }).AllowAnonymous().WithTags("Auth");
+}
+
+ApplyWriteAuth(admin.MapGet("/jobs/search", async (
+    AppJobService jobService,
     int? page,
     int? pageSize,
     Guid? customerId,
@@ -299,10 +353,90 @@ jobs.MapGet("/search", async (
     var errors = new Dictionary<string, string[]>();
     var (resolvedPage, resolvedPageSize) = NormalizePaging(page, pageSize, errors);
 
-    JobStatus? parsedStatus = null;
+    DomainJobs.JobStatus? parsedStatus = null;
     if (!string.IsNullOrWhiteSpace(status))
     {
-        if (Enum.TryParse<JobStatus>(status, true, out var jobStatus))
+        if (Enum.TryParse<DomainJobs.JobStatus>(status, true, out var jobStatus))
+        {
+            parsedStatus = jobStatus;
+        }
+        else
+        {
+            errors["status"] = new[] { "Status must be a valid JobStatus value." };
+        }
+    }
+
+    if (errors.Count > 0)
+    {
+        return Results.ValidationProblem(errors, extensions: BuildProblemExtensions());
+    }
+
+    var query = new JobListQuery(resolvedPage, resolvedPageSize, customerId, parsedStatus);
+    var results = await jobService.ListAsync(query);
+    return Results.Ok(results);
+}), authEnabled);
+
+ApplyWriteAuth(admin.MapGet("/bookings/search", async (
+    BookingService bookingService,
+    int? page,
+    int? pageSize,
+    Guid? jobId,
+    Guid? providerId,
+    string? status,
+    DateTime? startUtcFrom,
+    DateTime? startUtcTo) =>
+{
+    var errors = new Dictionary<string, string[]>();
+    var (resolvedPage, resolvedPageSize) = NormalizePaging(page, pageSize, errors);
+
+    RentADad.Domain.Bookings.BookingStatus? parsedStatus = null;
+    if (!string.IsNullOrWhiteSpace(status))
+    {
+        if (Enum.TryParse<RentADad.Domain.Bookings.BookingStatus>(status, true, out var bookingStatus))
+        {
+            parsedStatus = bookingStatus;
+        }
+        else
+        {
+            errors["status"] = new[] { "Status must be a valid BookingStatus value." };
+        }
+    }
+
+    if (startUtcFrom is not null && startUtcTo is not null && startUtcFrom > startUtcTo)
+    {
+        errors["startUtcFrom"] = new[] { "StartUtcFrom must be earlier than StartUtcTo." };
+    }
+
+    if (errors.Count > 0)
+    {
+        return Results.ValidationProblem(errors, extensions: BuildProblemExtensions());
+    }
+
+    var query = new BookingListQuery(resolvedPage, resolvedPageSize, jobId, providerId, parsedStatus, startUtcFrom, startUtcTo);
+    var results = await bookingService.ListAsync(query);
+    return Results.Ok(results);
+}), authEnabled);
+
+jobs.MapGet("/", async (AppJobService jobService) =>
+{
+    var results = await jobService.ListAsync();
+    return Results.Ok(results);
+}).AllowAnonymous();
+
+jobs.MapGet("/search", async (
+    AppJobService jobService,
+    int? page,
+    int? pageSize,
+    Guid? customerId,
+    string? status) =>
+{
+    var errors = new Dictionary<string, string[]>();
+    var (resolvedPage, resolvedPageSize) = NormalizePaging(page, pageSize, errors);
+
+    DomainJobs.JobStatus? parsedStatus = null;
+    if (!string.IsNullOrWhiteSpace(status))
+    {
+        if (Enum.TryParse<DomainJobs.JobStatus>(status, true, out var jobStatus))
         {
             parsedStatus = jobStatus;
         }
@@ -322,22 +456,22 @@ jobs.MapGet("/search", async (
     return Results.Ok(results);
 }).AllowAnonymous();
 
-jobs.MapGet("/{jobId:guid}", async (JobService jobService, Guid jobId) =>
+jobs.MapGet("/{jobId:guid}", async (AppJobService jobService, Guid jobId) =>
 {
     var job = await jobService.GetAsync(jobId);
     return job is null ? Results.NotFound() : WithEtag(Results.Ok(job), job.UpdatedUtc);
 }).AllowAnonymous();
 
-jobs.MapPost("/", async (JobService jobService, IValidator<CreateJobRequest> validator, CreateJobRequest request) =>
+ApplyWriteAuth(jobs.MapPost("/", async (AppJobService jobService, IValidator<CreateJobRequest> validator, CreateJobRequest request) =>
 {
     var validation = await validator.ValidateAsync(request);
     if (!validation.IsValid) return Results.ValidationProblem(ToProblem(validation), extensions: BuildProblemExtensions());
 
     var job = await jobService.CreateAsync(request);
     return WithEtag(Results.Created($"/api/v1/jobs/{job.Id}", job), job.UpdatedUtc);
-});
+}), authEnabled);
 
-jobs.MapPut("/{jobId:guid}", async (JobService jobService, IValidator<UpdateJobRequest> validator, HttpRequest httpRequest, Guid jobId, UpdateJobRequest request) =>
+ApplyWriteAuth(jobs.MapPut("/{jobId:guid}", async (AppJobService jobService, IValidator<UpdateJobRequest> validator, HttpRequest httpRequest, Guid jobId, UpdateJobRequest request) =>
 {
     var validation = await validator.ValidateAsync(request);
     if (!validation.IsValid) return Results.ValidationProblem(ToProblem(validation), extensions: BuildProblemExtensions());
@@ -349,9 +483,9 @@ jobs.MapPut("/{jobId:guid}", async (JobService jobService, IValidator<UpdateJobR
 
     var job = await jobService.UpdateAsync(jobId, request);
     return job is null ? Results.NotFound() : WithEtag(Results.Ok(job), job.UpdatedUtc);
-});
+}), authEnabled);
 
-jobs.MapPatch("/{jobId:guid}", async (JobService jobService, IValidator<PatchJobRequest> validator, HttpRequest httpRequest, Guid jobId, PatchJobRequest request) =>
+ApplyWriteAuth(jobs.MapPatch("/{jobId:guid}", async (AppJobService jobService, IValidator<PatchJobRequest> validator, HttpRequest httpRequest, Guid jobId, PatchJobRequest request) =>
 {
     var validation = await validator.ValidateAsync(request);
     if (!validation.IsValid) return Results.ValidationProblem(ToProblem(validation), extensions: BuildProblemExtensions());
@@ -363,9 +497,9 @@ jobs.MapPatch("/{jobId:guid}", async (JobService jobService, IValidator<PatchJob
 
     var job = await jobService.PatchAsync(jobId, request);
     return job is null ? Results.NotFound() : WithEtag(Results.Ok(job), job.UpdatedUtc);
-});
+}), authEnabled);
 
-jobs.MapPost("/{jobId:guid}:post", async (JobService jobService, HttpRequest httpRequest, Guid jobId) =>
+ApplyWriteAuth(jobs.MapPost("/{jobId:guid}:post", async (AppJobService jobService, HttpRequest httpRequest, Guid jobId) =>
 {
     var current = await jobService.GetAsync(jobId);
     if (current is null) return Results.NotFound();
@@ -374,9 +508,9 @@ jobs.MapPost("/{jobId:guid}:post", async (JobService jobService, HttpRequest htt
 
     var job = await jobService.PostAsync(jobId);
     return job is null ? Results.NotFound() : WithEtag(Results.Ok(job), job.UpdatedUtc);
-});
+}), authEnabled);
 
-jobs.MapPost("/{jobId:guid}:accept", async (JobService jobService, IValidator<AcceptJobRequest> validator, HttpRequest httpRequest, Guid jobId, AcceptJobRequest request) =>
+ApplyWriteAuth(jobs.MapPost("/{jobId:guid}:accept", async (AppJobService jobService, IValidator<AcceptJobRequest> validator, HttpRequest httpRequest, Guid jobId, AcceptJobRequest request) =>
 {
     var validation = await validator.ValidateAsync(request);
     if (!validation.IsValid) return Results.ValidationProblem(ToProblem(validation), extensions: BuildProblemExtensions());
@@ -388,9 +522,9 @@ jobs.MapPost("/{jobId:guid}:accept", async (JobService jobService, IValidator<Ac
 
     var job = await jobService.AcceptAsync(jobId, request);
     return job is null ? Results.NotFound() : WithEtag(Results.Ok(job), job.UpdatedUtc);
-});
+}), authEnabled);
 
-jobs.MapPost("/{jobId:guid}:start", async (JobService jobService, HttpRequest httpRequest, Guid jobId) =>
+ApplyWriteAuth(jobs.MapPost("/{jobId:guid}:start", async (AppJobService jobService, HttpRequest httpRequest, Guid jobId) =>
 {
     var current = await jobService.GetAsync(jobId);
     if (current is null) return Results.NotFound();
@@ -399,9 +533,9 @@ jobs.MapPost("/{jobId:guid}:start", async (JobService jobService, HttpRequest ht
 
     var job = await jobService.StartAsync(jobId);
     return job is null ? Results.NotFound() : WithEtag(Results.Ok(job), job.UpdatedUtc);
-});
+}), authEnabled);
 
-jobs.MapPost("/{jobId:guid}:complete", async (JobService jobService, HttpRequest httpRequest, Guid jobId) =>
+ApplyWriteAuth(jobs.MapPost("/{jobId:guid}:complete", async (AppJobService jobService, HttpRequest httpRequest, Guid jobId) =>
 {
     var current = await jobService.GetAsync(jobId);
     if (current is null) return Results.NotFound();
@@ -410,9 +544,9 @@ jobs.MapPost("/{jobId:guid}:complete", async (JobService jobService, HttpRequest
 
     var job = await jobService.CompleteAsync(jobId);
     return job is null ? Results.NotFound() : WithEtag(Results.Ok(job), job.UpdatedUtc);
-});
+}), authEnabled);
 
-jobs.MapPost("/{jobId:guid}:close", async (JobService jobService, HttpRequest httpRequest, Guid jobId) =>
+ApplyWriteAuth(jobs.MapPost("/{jobId:guid}:close", async (AppJobService jobService, HttpRequest httpRequest, Guid jobId) =>
 {
     var current = await jobService.GetAsync(jobId);
     if (current is null) return Results.NotFound();
@@ -421,9 +555,9 @@ jobs.MapPost("/{jobId:guid}:close", async (JobService jobService, HttpRequest ht
 
     var job = await jobService.CloseAsync(jobId);
     return job is null ? Results.NotFound() : WithEtag(Results.Ok(job), job.UpdatedUtc);
-});
+}), authEnabled);
 
-jobs.MapPost("/{jobId:guid}:dispute", async (JobService jobService, HttpRequest httpRequest, Guid jobId) =>
+ApplyWriteAuth(jobs.MapPost("/{jobId:guid}:dispute", async (AppJobService jobService, HttpRequest httpRequest, Guid jobId) =>
 {
     var current = await jobService.GetAsync(jobId);
     if (current is null) return Results.NotFound();
@@ -432,9 +566,9 @@ jobs.MapPost("/{jobId:guid}:dispute", async (JobService jobService, HttpRequest 
 
     var job = await jobService.DisputeAsync(jobId);
     return job is null ? Results.NotFound() : WithEtag(Results.Ok(job), job.UpdatedUtc);
-});
+}), authEnabled);
 
-jobs.MapPost("/{jobId:guid}:cancel", async (JobService jobService, HttpRequest httpRequest, Guid jobId) =>
+ApplyWriteAuth(jobs.MapPost("/{jobId:guid}:cancel", async (AppJobService jobService, HttpRequest httpRequest, Guid jobId) =>
 {
     var current = await jobService.GetAsync(jobId);
     if (current is null) return Results.NotFound();
@@ -443,7 +577,7 @@ jobs.MapPost("/{jobId:guid}:cancel", async (JobService jobService, HttpRequest h
 
     var job = await jobService.CancelAsync(jobId);
     return job is null ? Results.NotFound() : WithEtag(Results.Ok(job), job.UpdatedUtc);
-});
+}), authEnabled);
 
 bookings.MapGet("/{bookingId:guid}", async (BookingService bookingService, Guid bookingId) =>
 {
@@ -464,10 +598,10 @@ bookings.MapGet("/search", async (
     var errors = new Dictionary<string, string[]>();
     var (resolvedPage, resolvedPageSize) = NormalizePaging(page, pageSize, errors);
 
-    BookingStatus? parsedStatus = null;
+    RentADad.Domain.Bookings.BookingStatus? parsedStatus = null;
     if (!string.IsNullOrWhiteSpace(status))
     {
-        if (Enum.TryParse<BookingStatus>(status, true, out var bookingStatus))
+        if (Enum.TryParse<RentADad.Domain.Bookings.BookingStatus>(status, true, out var bookingStatus))
         {
             parsedStatus = bookingStatus;
         }
@@ -492,16 +626,16 @@ bookings.MapGet("/search", async (
     return Results.Ok(results);
 }).AllowAnonymous();
 
-bookings.MapPost("/", async (BookingService bookingService, IValidator<CreateBookingRequest> validator, CreateBookingRequest request) =>
+ApplyWriteAuth(bookings.MapPost("/", async (BookingService bookingService, IValidator<CreateBookingRequest> validator, CreateBookingRequest request) =>
 {
     var validation = await validator.ValidateAsync(request);
     if (!validation.IsValid) return Results.ValidationProblem(ToProblem(validation), extensions: BuildProblemExtensions());
 
     var booking = await bookingService.CreateAsync(request);
     return WithEtag(Results.Created($"/api/v1/bookings/{booking.Id}", booking), booking.UpdatedUtc);
-});
+}), authEnabled);
 
-bookings.MapPost("/{bookingId:guid}:confirm", async (BookingService bookingService, HttpRequest httpRequest, Guid bookingId) =>
+ApplyWriteAuth(bookings.MapPost("/{bookingId:guid}:confirm", async (BookingService bookingService, HttpRequest httpRequest, Guid bookingId) =>
 {
     var current = await bookingService.GetAsync(bookingId);
     if (current is null) return Results.NotFound();
@@ -510,9 +644,9 @@ bookings.MapPost("/{bookingId:guid}:confirm", async (BookingService bookingServi
 
     var booking = await bookingService.ConfirmAsync(bookingId);
     return booking is null ? Results.NotFound() : WithEtag(Results.Ok(booking), booking.UpdatedUtc);
-});
+}), authEnabled);
 
-bookings.MapPost("/{bookingId:guid}:decline", async (BookingService bookingService, HttpRequest httpRequest, Guid bookingId) =>
+ApplyWriteAuth(bookings.MapPost("/{bookingId:guid}:decline", async (BookingService bookingService, HttpRequest httpRequest, Guid bookingId) =>
 {
     var current = await bookingService.GetAsync(bookingId);
     if (current is null) return Results.NotFound();
@@ -521,9 +655,9 @@ bookings.MapPost("/{bookingId:guid}:decline", async (BookingService bookingServi
 
     var booking = await bookingService.DeclineAsync(bookingId);
     return booking is null ? Results.NotFound() : WithEtag(Results.Ok(booking), booking.UpdatedUtc);
-});
+}), authEnabled);
 
-bookings.MapPost("/{bookingId:guid}:expire", async (BookingService bookingService, HttpRequest httpRequest, Guid bookingId) =>
+ApplyWriteAuth(bookings.MapPost("/{bookingId:guid}:expire", async (BookingService bookingService, HttpRequest httpRequest, Guid bookingId) =>
 {
     var current = await bookingService.GetAsync(bookingId);
     if (current is null) return Results.NotFound();
@@ -532,9 +666,9 @@ bookings.MapPost("/{bookingId:guid}:expire", async (BookingService bookingServic
 
     var booking = await bookingService.ExpireAsync(bookingId);
     return booking is null ? Results.NotFound() : WithEtag(Results.Ok(booking), booking.UpdatedUtc);
-});
+}), authEnabled);
 
-bookings.MapPost("/{bookingId:guid}:cancel", async (BookingService bookingService, HttpRequest httpRequest, Guid bookingId) =>
+ApplyWriteAuth(bookings.MapPost("/{bookingId:guid}:cancel", async (BookingService bookingService, HttpRequest httpRequest, Guid bookingId) =>
 {
     var current = await bookingService.GetAsync(bookingId);
     if (current is null) return Results.NotFound();
@@ -543,7 +677,7 @@ bookings.MapPost("/{bookingId:guid}:cancel", async (BookingService bookingServic
 
     var booking = await bookingService.CancelAsync(bookingId);
     return booking is null ? Results.NotFound() : WithEtag(Results.Ok(booking), booking.UpdatedUtc);
-});
+}), authEnabled);
 
 providers.MapGet("/{providerId:guid}", async (ProviderService providerService, Guid providerId) =>
 {
@@ -570,16 +704,16 @@ providers.MapGet("/search", async (
     return Results.Ok(results);
 }).AllowAnonymous();
 
-providers.MapPost("/", async (ProviderService providerService, IValidator<RegisterProviderRequest> validator, RegisterProviderRequest request) =>
+ApplyWriteAuth(providers.MapPost("/", async (ProviderService providerService, IValidator<RegisterProviderRequest> validator, RegisterProviderRequest request) =>
 {
     var validation = await validator.ValidateAsync(request);
     if (!validation.IsValid) return Results.ValidationProblem(ToProblem(validation), extensions: BuildProblemExtensions());
 
     var provider = await providerService.RegisterAsync(request);
     return WithEtag(Results.Created($"/api/v1/providers/{provider.Id}", provider), provider.UpdatedUtc);
-});
+}), authEnabled);
 
-providers.MapPut("/{providerId:guid}", async (ProviderService providerService, IValidator<UpdateProviderRequest> validator, HttpRequest httpRequest, Guid providerId, UpdateProviderRequest request) =>
+ApplyWriteAuth(providers.MapPut("/{providerId:guid}", async (ProviderService providerService, IValidator<UpdateProviderRequest> validator, HttpRequest httpRequest, Guid providerId, UpdateProviderRequest request) =>
 {
     var validation = await validator.ValidateAsync(request);
     if (!validation.IsValid) return Results.ValidationProblem(ToProblem(validation), extensions: BuildProblemExtensions());
@@ -591,9 +725,9 @@ providers.MapPut("/{providerId:guid}", async (ProviderService providerService, I
 
     var provider = await providerService.UpdateAsync(providerId, request);
     return provider is null ? Results.NotFound() : WithEtag(Results.Ok(provider), provider.UpdatedUtc);
-});
+}), authEnabled);
 
-providers.MapPost("/{providerId:guid}/availability", async (ProviderService providerService, IValidator<AddAvailabilityRequest> validator, HttpRequest httpRequest, Guid providerId, AddAvailabilityRequest request) =>
+ApplyWriteAuth(providers.MapPost("/{providerId:guid}/availability", async (ProviderService providerService, IValidator<AddAvailabilityRequest> validator, HttpRequest httpRequest, Guid providerId, AddAvailabilityRequest request) =>
 {
     var validation = await validator.ValidateAsync(request);
     if (!validation.IsValid) return Results.ValidationProblem(ToProblem(validation), extensions: BuildProblemExtensions());
@@ -605,9 +739,9 @@ providers.MapPost("/{providerId:guid}/availability", async (ProviderService prov
 
     var provider = await providerService.AddAvailabilityAsync(providerId, request);
     return provider is null ? Results.NotFound() : WithEtag(Results.Ok(provider), provider.UpdatedUtc);
-});
+}), authEnabled);
 
-providers.MapDelete("/{providerId:guid}/availability/{availabilityId:guid}", async (ProviderService providerService, HttpRequest httpRequest, Guid providerId, Guid availabilityId) =>
+ApplyWriteAuth(providers.MapDelete("/{providerId:guid}/availability/{availabilityId:guid}", async (ProviderService providerService, HttpRequest httpRequest, Guid providerId, Guid availabilityId) =>
 {
     var current = await providerService.GetAsync(providerId);
     if (current is null) return Results.NotFound();
@@ -616,7 +750,7 @@ providers.MapDelete("/{providerId:guid}/availability/{availabilityId:guid}", asy
 
     var provider = await providerService.RemoveAvailabilityAsync(providerId, availabilityId);
     return provider is null ? Results.NotFound() : WithEtag(Results.Ok(provider), provider.UpdatedUtc);
-});
+}), authEnabled);
 
 static Dictionary<string, string[]> ToProblem(ValidationResult validation)
 {
@@ -697,6 +831,16 @@ static IResult? ValidateIfMatch(HttpRequest httpRequest, DateTime updatedUtc)
     return null;
 }
 
+static RouteHandlerBuilder ApplyWriteAuth(RouteHandlerBuilder builder, bool authEnabled)
+{
+    if (authEnabled)
+    {
+        builder.RequireAuthorization("WriteAccess");
+    }
+
+    return builder;
+}
+
 static bool TryParseEtagTicks(string header, out long ticks)
 {
     ticks = 0;
@@ -721,35 +865,6 @@ static string CreateEtag(DateTime updatedUtc)
     return $"W/\"{ticks}\"";
 }
 
-sealed class AuthTestStartupFilter : IStartupFilter
-{
-    public Action<IApplicationBuilder> Configure(Action<IApplicationBuilder> next)
-    {
-        return app =>
-        {
-            app.Use(async (context, pipelineNext) =>
-            {
-                if (context.Request.Headers.ContainsKey("X-Test-Auth-Disabled"))
-                {
-                    var endpoint = context.GetEndpoint();
-                    if (endpoint is not null)
-                    {
-                        var allowAnonymous = endpoint.Metadata.GetMetadata<Microsoft.AspNetCore.Authorization.IAllowAnonymous>();
-                        if (allowAnonymous is null)
-                        {
-                            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-                            return;
-                        }
-                    }
-                }
-
-                await pipelineNext();
-            });
-
-            next(app);
-        };
-    }
-}
 
 static void ValidateConfiguration(IConfiguration configuration, IHostEnvironment environment)
 {
