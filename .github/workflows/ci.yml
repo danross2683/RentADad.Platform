@@ -26,7 +26,7 @@ jobs:
         run: |
           title="${{ github.event.pull_request.title }}"
           printf '%s\n' "$title" > /tmp/PR_TITLE.txt
-          npx --yes @commitlint/cli@latest --config .commitlintrc.json --edit /tmp/PR_TITLE.txt
+          npx --yes -p @commitlint/cli@latest -p @commitlint/config-conventional@latest commitlint --config .commitlintrc.json --edit /tmp/PR_TITLE.txt
 
       - name: Lint commits
         shell: bash
@@ -38,7 +38,7 @@ jobs:
             from="${{ github.event.before }}"
             to="${{ github.sha }}"
           fi
-          npx --yes @commitlint/cli@latest --config .commitlintrc.json --from "$from" --to "$to"
+          npx --yes -p @commitlint/cli@latest -p @commitlint/config-conventional@latest commitlint --config .commitlintrc.json --from "$from" --to "$to"
 
   build-test:
     needs: commitlint
