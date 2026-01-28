@@ -10,6 +10,10 @@ See `docs/API_CONVENTIONS.md` for the v1 endpoints list and naming.
 
 See `docs/API_CONTRACTS.md` for request/response examples.
 
+## Versioning & deprecation
+
+See `docs/VERSIONING_POLICY.md` for versioning and deprecation rules.
+
 ## Auth scaffolding (JWT)
 
 - Use bearer token authentication.
@@ -27,6 +31,14 @@ See `docs/API_CONTRACTS.md` for request/response examples.
 
 - Use RFC 7807 ProblemDetails.
 - Include a stable `errorCode` extension for domain errors.
+
+## Usage limits
+
+See `docs/API_USAGE_LIMITS.md` for default limits and retry guidance.
+
+## Request tracing
+
+See `docs/REQUEST_TRACING.md` for correlation ID usage.
 
 ## Health & metrics
 
@@ -66,3 +78,7 @@ If `Notifications:WebhookUrl` is configured, the API posts a JSON payload for ke
 ## Caching
 
 Provider availability lookups are cached in memory for a short TTL (default 30 seconds) to reduce repeated reads.
+
+## Data retention
+
+See `docs/DATA_RETENTION.md` for the current retention policy note.

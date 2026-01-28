@@ -185,3 +185,26 @@
 
 - [x] Add user-facing documentation for API consumers
 - [x] Add status page or uptime link (if applicable)
+
+## Archive 2026-01-28 (Release Enablement)
+
+### P0 Release
+
+- [x] Add GitHub Actions release workflow (build, test, artefact)
+- [x] Add environment-specific deployment checklist (staging vs prod)
+- [x] Add release notes template (what changed, risks, rollback)
+- [x] Add production migration dry‑run guidance
+- [x] Add release approval checklist (sign‑off, comms, support)
+
+### P1 Platform
+
+- [x] Add API usage limits documentation for consumers
+- [x] Add deprecation policy link in API guide
+- [x] Add request tracing guide for clients
+- [x] Add data retention policy note
+
+### P2 Reliability
+
+- [x] Add load test script (basic concurrency baseline)
+- [x] Add chaos test checklist (DB down, webhook failures)
+- [x] Add backup restore drill schedule

@@ -1,24 +1,22 @@
 # RentADad.Platform TODO
 
-## Milestone: Release Enablement
+## Milestone: Scale & Maturity
 
-### P0 Release
+### P0 Scale
 
-- [x] Add GitHub Actions release workflow (build, test, artefact)
-- [x] Add environment-specific deployment checklist (staging vs prod)
-- [x] Add release notes template (what changed, risks, rollback)
-- [x] Add production migration dry‑run guidance
-- [x] Add release approval checklist (sign‑off, comms, support)
+- [ ] Add Postgres connection pool tuning guidance
+- [ ] Add background job health endpoint (exposes last run)
+- [ ] Add cache invalidation monitoring
+- [ ] Add circuit breaker for webhook calls
 
-### P1 Platform
+### P1 Security
 
-- [ ] Add API usage limits documentation for consumers
-- [ ] Add deprecation policy link in API guide
-- [ ] Add request tracing guide for clients
-- [ ] Add data retention policy note
+- [ ] Add audit log retention policy
+- [ ] Add API key rotation endpoint for admins
+- [ ] Add IP allow‑list support
 
-### P2 Reliability
+### P2 Product
 
-- [ ] Add load test script (basic concurrency baseline)
-- [ ] Add chaos test checklist (DB down, webhook failures)
-- [ ] Add backup restore drill schedule
+- [ ] Add onboarding guide for new integrators
+- [ ] Add example client SDK snippet
+- [ ] Add FAQ for common API errors
